@@ -1,0 +1,12 @@
+{
+  "name": "pb4t-planner",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "reset-demo": "node scripts/start.mjs --reset",
+    "build": "npm --prefix web run build"
+  },
+  "engines": { "node": ">=22.12.0" }
+}
