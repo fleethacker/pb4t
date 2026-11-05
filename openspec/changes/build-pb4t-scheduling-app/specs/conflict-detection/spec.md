@@ -19,6 +19,20 @@ The evaluator SHALL find concrete qualified and available personnel assignments 
 - **WHEN** simultaneous events have distinct available qualified personnel and all other hard rules are satisfied
 - **THEN** the evaluator returns a feasible set of concrete personnel assignments
 
+#### Scenario: A personnel conflict does not mark an unrelated event
+- **WHEN** two Monday drills cannot share the available qualified personnel and a Thursday steering drill is independently staffable outside their configured rest interval
+- **THEN** the personnel conflict identifies the competing Monday group without including the Thursday event
+- **AND** the Thursday event retains concrete assignments and has no unrelated personnel alert
+- **AND** the overall plan remains infeasible until the genuine Monday conflict is resolved
+- **AND** the event editor distinguishes this event's conflicts from other weekly-plan conflicts without bypassing plan validation when saving
+
+#### Scenario: Report separate staffing groups independently
+- **WHEN** independent groups have their own personnel shortages
+- **THEN** each failed group receives its own personnel conflict with its relevant events, resources, and interval
+- **AND** staffing groups include events linked by configured rest as well as actual overlap
+- **AND** all roles of the same event are checked together
+- **AND** agent revision feedback is minimized within each reported group and routed to that group's departments
+
 ### Requirement: Asset capacity enforcement
 The evaluator SHALL ensure combined concurrent asset demand does not exceed available capacity and that requested assets are available for each event's full interval.
 

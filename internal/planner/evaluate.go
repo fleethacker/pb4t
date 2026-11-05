@@ -130,13 +130,7 @@ func Evaluate(d Data, events []Event) Evaluation {
 			}
 		}
 	}
-	type slot struct {
-		e          Event
-		rule       Rule
-		candidates []Person
-		blocked    []string
-	}
-	slots := []slot{}
+	slots := []personnelSlot{}
 	for _, e := range active {
 		for _, r := range Rules(d, e) {
 			if !r.Confirmed || (r.Type != "qualification" && r.Type != "person") {
@@ -146,7 +140,7 @@ func Evaluate(d Data, events []Event) Evaluation {
 			if r.Type == "person" {
 				count = 1
 			}
-			s := slot{e: e, rule: r, candidates: []Person{}, blocked: []string{}}
+			s := personnelSlot{e: e, rule: r, candidates: []Person{}, blocked: []string{}}
 			for _, p := range d.People {
 				if (r.Type == "person" && r.PersonID != p.ID) || (r.Type == "qualification" && !slices.Contains(p.Qualifications, r.QualificationID)) {
 					continue
@@ -187,83 +181,89 @@ func Evaluate(d Data, events []Event) Evaluation {
 			}
 		}
 	}
-	sort.SliceStable(slots, func(i, j int) bool { return len(slots[i].candidates) < len(slots[j].candidates) })
-	chosen := make([]Assignment, len(slots))
-	nodes := 0
-	var assign func(int) bool
-	assign = func(i int) bool {
-		nodes++
-		if nodes > 100000 {
+	for _, slots := range personnelGroups(d, slots) {
+		sort.SliceStable(slots, func(i, j int) bool { return len(slots[i].candidates) < len(slots[j].candidates) })
+		chosen := make([]Assignment, len(slots))
+		nodes := 0
+		var assign func(int) bool
+		assign = func(i int) bool {
+			nodes++
+			if nodes > 100000 {
+				return false
+			}
+			if i == len(slots) {
+				return true
+			}
+			s := slots[i]
+			for _, p := range s.candidates {
+				ok := true
+				for j := 0; j < i; j++ {
+					if chosen[j].PersonID != p.ID {
+						continue
+					}
+					other := slots[j].e
+					if competingPersonnel(d, s.e, other) {
+						ok = false
+						break
+					}
+				}
+				if ok {
+					role := s.rule.QualificationID
+					if s.rule.Type == "person" {
+						role = "required participant"
+					}
+					chosen[i] = Assignment{s.e.ID, p.ID, role}
+					if assign(i + 1) {
+						return true
+					}
+				}
+			}
 			return false
 		}
-		if i == len(slots) {
-			return true
-		}
-		s := slots[i]
-		for _, p := range s.candidates {
-			ok := true
-			for j := 0; j < i; j++ {
-				if chosen[j].PersonID != p.ID {
-					continue
+		if assign(0) {
+			out.Assignments = append(out.Assignments, chosen...)
+		} else {
+			ids, resources := []string{}, []string{}
+			details := []string{}
+			for _, s := range slots {
+				if !slices.Contains(ids, s.e.ID) {
+					ids = append(ids, s.e.ID)
 				}
-				other := slots[j].e
-				if other.ID == s.e.ID || Overlap(s.e.Start, s.e.End(), other.Start, other.End()) || (s.e.Fatigue && other.Fatigue && tooClose(s.e.Start, s.e.End(), other.Start, other.End(), max(restFor(d, s.e), restFor(d, other)))) {
-					ok = false
-					break
+				names := []string{}
+				for _, p := range s.candidates {
+					names = append(names, p.Name)
+					if !slices.Contains(resources, p.ID) {
+						resources = append(resources, p.ID)
+					}
 				}
-			}
-			if ok {
 				role := s.rule.QualificationID
+				for _, q := range d.Qualifications {
+					if q.ID == role {
+						role = q.Name
+					}
+				}
 				if s.rule.Type == "person" {
-					role = "required participant"
+					role = "named participant " + s.rule.PersonID
 				}
-				chosen[i] = Assignment{s.e.ID, p.ID, role}
-				if assign(i + 1) {
-					return true
+				detail := fmt.Sprintf("%s requires %d × %s; available: %s", s.e.Name, max(1, s.rule.Count), role, strings.Join(names, ", "))
+				if len(s.blocked) > 0 {
+					detail += ". Restricted: " + strings.Join(s.blocked, "; ")
+				}
+				if !slices.Contains(details, detail) {
+					details = append(details, detail)
 				}
 			}
+			start, end := time.Time{}, time.Time{}
+			if len(slots) > 0 {
+				start = slots[0].e.Start
+				end = slots[0].e.End()
+				for _, s := range slots[1:] {
+					start = minTime(start, s.e.Start)
+					end = maxTime(end, s.e.End())
+				}
+			}
+			add("personnel", "", "No joint personnel assignment satisfies availability, collisions, and configured rest. "+strings.Join(details, " | "), ids, resources, start, end)
 		}
-		return false
-	}
-	if assign(0) {
-		out.Assignments = chosen
-	} else {
-		ids, resources := []string{}, []string{}
-		details := []string{}
-		for _, s := range slots {
-			if !slices.Contains(ids, s.e.ID) {
-				ids = append(ids, s.e.ID)
-			}
-			names := []string{}
-			for _, p := range s.candidates {
-				names = append(names, p.Name)
-				if !slices.Contains(resources, p.ID) {
-					resources = append(resources, p.ID)
-				}
-			}
-			role := s.rule.QualificationID
-			for _, q := range d.Qualifications {
-				if q.ID == role {
-					role = q.Name
-				}
-			}
-			if s.rule.Type == "person" {
-				role = "named participant " + s.rule.PersonID
-			}
-			detail := fmt.Sprintf("%s requires %d × %s; available: %s", s.e.Name, max(1, s.rule.Count), role, strings.Join(names, ", "))
-			if len(s.blocked) > 0 {
-				detail += ". Restricted: " + strings.Join(s.blocked, "; ")
-			}
-			if !slices.Contains(details, detail) {
-				details = append(details, detail)
-			}
-		}
-		start, end := time.Time{}, time.Time{}
-		if len(slots) > 0 {
-			start = slots[0].e.Start
-			end = slots[0].e.End()
-		}
-		add("personnel", "", "No joint personnel assignment satisfies availability, collisions, and configured rest. "+strings.Join(details, " | "), ids, resources, start, end)
 	}
 	out.Feasible = len(out.Conflicts) == 0
 	out.Coverage = Training(d, events, out.Conflicts)

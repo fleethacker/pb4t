@@ -54,6 +54,8 @@ Optional settings in `.env` or environment variables:
 
 **Planning inputs** maintains departments, qualifications, personnel and availability, duties, assets, constraints, event templates, requirements, and completion history. Event templates contain reusable defaults without dates. Each scheduled occurrence receives a copy; editing a template affects future occurrences. Existing events can be copied with **Save as new template**. Removing referenced records requires updating their attachments first. Empty availability means unavailable. Minimum rest uses only supplied duty/drill data and the configured policy.
 
+Personnel checks group events that can compete for the same eligible people through overlap or configured rest. A staffing problem in one group does not mark unrelated events elsewhere in the week. The event editor shows conflicts involving that event and identifies other weekly-plan conflicts separately; saving as scheduled still requires a valid plan.
+
 Proposals are saved and can be reopened from **Saved proposals** after refresh. **Cancel proposal** leaves the calendar unchanged. If planning inputs change while a proposal is under review, generate a fresh proposal before applying.
 
 Original-time outlines use department colors. Hover over a change in the right-hand proposal pane to highlight both its current and proposed positions; keyboard focus does the same. Other calendar blocks are subdued while inspecting that change.

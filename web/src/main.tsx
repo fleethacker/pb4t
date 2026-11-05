@@ -1449,6 +1449,8 @@ function EventEditor({
     [newRules, setNewRules] = useState<ConstraintDraft[]>([]),
     [text, setText] = useState(""),
     [rules, setRules] = useState(data.constraints);
+  const eventConflicts = ev?.conflicts.filter((c) => c.event_ids.includes(e.id)) || [];
+  const otherConflicts = (ev?.conflicts.length || 0) - eventConflicts.length;
   const change = (key: keyof Event, value: unknown) => {
     setE({ ...e, [key]: value });
     setEv(null);
@@ -1896,11 +1898,18 @@ function EventEditor({
           {ev && (
             <div className="validation-result">
               <h3>
-                {ev.feasible
-                  ? "Placement is feasible"
-                  : "Placement needs attention"}
+                {eventConflicts.length
+                  ? "This event needs attention"
+                  : "No conflicts for this event"}
               </h3>
-              <ConflictList evaluation={ev} />
+              <ConflictList evaluation={{ ...ev, conflicts: eventConflicts }} />
+              {otherConflicts > 0 && (
+                <p className="notice">
+                  The weekly plan has {otherConflicts} other{" "}
+                  {otherConflicts === 1 ? "conflict" : "conflicts"}. Resolve the
+                  plan before saving as scheduled, or keep this event as a draft.
+                </p>
+              )}
               {ev.assignments
                 ?.filter((a) => a.event_id === e.id)
                 .map((a, i) => (

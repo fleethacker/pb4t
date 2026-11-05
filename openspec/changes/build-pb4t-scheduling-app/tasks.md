@@ -134,3 +134,8 @@
 
 - [x] 20.1 Revert the uncommitted details popup, use uniform day backgrounds, and add two valid sample events on each weekend day.
 - [x] 20.2 Verify weekend rendering, restored editor behavior, complete generation, and persistence in an isolated demo.
+
+## 21. Scoped personnel conflict reporting
+
+- [x] 21.1 Evaluate potentially competing personnel groups independently and keep agent feedback scoped to each failed group.
+- [x] 21.2 Reproduce the steering-drill false alert and verify real collisions, rest, role assignments, independent agent routing, and calendar feedback against the captured live dataset.

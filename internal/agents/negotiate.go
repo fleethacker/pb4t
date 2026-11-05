@@ -123,13 +123,18 @@ func weekEvents(events []planner.Event, w time.Time) []planner.Event {
 }
 
 // actionable attributes direct violations to departments that can change the
-// affected events. A joint staffing report currently lists every role in the
-// plan, so shrink it to an actual infeasible staffing group before routing it.
+// affected events. Minimize within each reported staffing group so independent
+// personnel conflicts keep their own department routing.
 func actionable(d planner.Data, events []planner.Event) map[string][]planner.Conflict {
 	out := map[string][]planner.Conflict{}
 	for _, conflict := range planner.Evaluate(d, events).Conflicts {
 		if conflict.Type == "personnel" {
-			core := slices.Clone(events)
+			core := []planner.Event{}
+			for _, e := range events {
+				if slices.Contains(conflict.EventIDs, e.ID) {
+					core = append(core, e)
+				}
+			}
 			for i := 0; i < len(core); {
 				reduced := slices.Delete(slices.Clone(core), i, i+1)
 				stillBlocked := slices.ContainsFunc(planner.Evaluate(d, reduced).Conflicts, func(c planner.Conflict) bool { return c.Type == "personnel" })
