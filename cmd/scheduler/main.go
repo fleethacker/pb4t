@@ -67,6 +67,7 @@ func main() {
 	mux.HandleFunc("POST /api/runs/{id}/apply", a.apply)
 	mux.HandleFunc("POST /api/constraints/interpret", a.interpret)
 	mux.HandleFunc("POST /api/events/{id}/complete", a.complete)
+	mux.HandleFunc("POST /api/events/{id}/move", a.moveEvent)
 	mux.HandleFunc("GET /api/documents", a.listDocuments)
 	mux.HandleFunc("POST /api/documents", a.importDocument)
 	mux.HandleFunc("GET /api/documents/{id}", a.getDocument)
@@ -190,7 +191,7 @@ func (a *app) edit(w http.ResponseWriter, r *http.Request) {
 		}
 		if e.Status == "scheduled" {
 			ev := planner.Evaluate(planner.Relevant(d, planner.Week(e.Start, a.loc)), planner.WeekEvents(d, planner.Week(e.Start, a.loc)))
-			if !ev.Feasible {
+			if !ev.Feasible && !e.IgnoreConflicts {
 				respond(w, 409, map[string]any{"error": "Placement conflicts with the working plan. Resolve it or save as draft.", "evaluation": ev})
 				return
 			}
@@ -202,6 +203,53 @@ func (a *app) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, 200, map[string]bool{"saved": true})
+}
+
+// moveEvent saves only the placement, retaining the latest event details.
+// Non-waived scheduled events become drafts if the working plan is infeasible.
+func (a *app) moveEvent(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Start time.Time `json:"start"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.Start.IsZero() {
+		fail(w, 400, fmt.Errorf("a start time is required"))
+		return
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	d, err := a.db.Load(r.Context())
+	if err != nil {
+		fail(w, 500, err)
+		return
+	}
+	i := slices.IndexFunc(d.Events, func(e planner.Event) bool { return e.ID == r.PathValue("id") })
+	if i < 0 {
+		fail(w, 404, fmt.Errorf("event not found"))
+		return
+	}
+	e := &d.Events[i]
+	if e.Fixed || e.Status == "completed" {
+		fail(w, 400, fmt.Errorf("fixed or completed events cannot be moved"))
+		return
+	}
+	e.Start, e.RequestedStart = req.Start, req.Start
+	week := planner.Week(e.Start, a.loc)
+	events := planner.WeekEvents(d, week)
+	ev := planner.Evaluate(planner.Relevant(d, week), events)
+	if e.Status == "scheduled" && !ev.Feasible && !e.IgnoreConflicts {
+		e.Status = "draft"
+		events = planner.WeekEvents(d, week)
+		ev = planner.Evaluate(planner.Relevant(d, week), events)
+	}
+	d.Assignments = planner.MergeAssignments(d, events, ev.Assignments)
+	if err = a.db.Save(r.Context(), d); err != nil {
+		fail(w, 500, err)
+		return
+	}
+	respond(w, 200, map[string]any{"event": *e, "evaluation": ev})
 }
 
 type candidateRequest struct {
@@ -269,6 +317,10 @@ func (a *app) startRun(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
+	if req.Event != nil && req.Event.IgnoreConflicts {
+		fail(w, 400, fmt.Errorf("ignored events are excluded from conflict resolution; save this event directly"))
+		return
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	d, err := a.db.Load(r.Context())
@@ -303,6 +355,9 @@ func (a *app) startRun(w http.ResponseWriter, r *http.Request) {
 		mode = "live-agents"
 	}
 	p := planner.Proposal{ID: planner.ID(), Week: week, Status: "running", Progress: "Preparing shared planning context", Snapshot: d, Mode: mode, Negotiation: []planner.DepartmentProposal{}}
+	if req.Event != nil {
+		p.TargetEventID = req.Event.ID
+	}
 	if err = a.db.SaveProposal(r.Context(), p); err != nil {
 		fail(w, 500, err)
 		return
@@ -331,7 +386,10 @@ func (a *app) resolve(p planner.Proposal, req candidateRequest) {
 		outside := slices.DeleteFunc(slices.Clone(d.Events), func(e planner.Event) bool { return planner.Overlap(e.Start, e.End(), p.Week, p.Week.AddDate(0, 0, 7)) })
 		d.Events = append(outside, events...)
 	}
-	weekEvents := planner.AddMissing(d, planner.WeekEvents(d, p.Week), p.Week)
+	weekEvents := planner.WeekEvents(d, p.Week)
+	if req.Event == nil {
+		weekEvents = planner.AddMissing(d, weekEvents, p.Week)
+	}
 	outside := slices.DeleteFunc(slices.Clone(d.Events), func(e planner.Event) bool { return planner.Overlap(e.Start, e.End(), p.Week, p.Week.AddDate(0, 0, 7)) })
 	d.Events = append(outside, weekEvents...)
 	prefs := []planner.Preference{}
@@ -340,7 +398,7 @@ func (a *app) resolve(p planner.Proposal, req candidateRequest) {
 		negotiationData.Events = slices.Clone(d.Events)
 		if req.Event != nil {
 			for i := range negotiationData.Events {
-				if negotiationData.Events[i].ID == req.Event.ID {
+				if negotiationData.Events[i].ID != req.Event.ID {
 					negotiationData.Events[i].Fixed = true
 				}
 			}
@@ -406,6 +464,14 @@ func (a *app) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, old := range planner.WeekEvents(d, p.Week) {
+		if p.TargetEventID != "" && old.ID != p.TargetEventID && !slices.ContainsFunc(p.Events, func(e planner.Event) bool { return reflect.DeepEqual(old, e) }) {
+			fail(w, 409, fmt.Errorf("event resolution changes another event"))
+			return
+		}
+		if old.IgnoreConflicts && !slices.ContainsFunc(p.Events, func(e planner.Event) bool { return reflect.DeepEqual(old, e) }) {
+			fail(w, 409, fmt.Errorf("proposal changes an ignored event"))
+			return
+		}
 		if old.Fixed && !slices.ContainsFunc(p.Events, func(e planner.Event) bool {
 			return e.ID == old.ID && e.Start.Equal(old.Start) && e.Duration == old.Duration
 		}) {
@@ -414,12 +480,12 @@ func (a *app) apply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	evaluation := planner.Evaluate(planner.Relevant(d, p.Week), p.Events)
-	if !evaluation.Feasible {
+	if !evaluation.FeasibleFor(p.TargetEventID) {
 		respond(w, 409, map[string]any{"error": "proposal no longer validates", "evaluation": evaluation})
 		return
 	}
 	for _, c := range evaluation.Coverage {
-		if !c.Requirement.End.After(p.Week.AddDate(0, 0, 7)) && c.Gap > 0 {
+		if p.TargetEventID == "" && !c.Requirement.End.After(p.Week.AddDate(0, 0, 7)) && c.Gap > 0 {
 			fail(w, 409, fmt.Errorf("required training remains uncovered"))
 			return
 		}
@@ -427,6 +493,9 @@ func (a *app) apply(w http.ResponseWriter, r *http.Request) {
 	d.Events = slices.DeleteFunc(d.Events, func(e planner.Event) bool { return planner.Overlap(e.Start, e.End(), p.Week, p.Week.AddDate(0, 0, 7)) })
 	d.Events = append(d.Events, p.Events...)
 	d.Assignments = slices.DeleteFunc(d.Assignments, func(x planner.Assignment) bool {
+		if p.TargetEventID != "" {
+			return x.EventID == p.TargetEventID || slices.ContainsFunc(evaluation.Assignments, func(a planner.Assignment) bool { return a.EventID == x.EventID })
+		}
 		return slices.ContainsFunc(p.Events, func(e planner.Event) bool { return e.ID == x.EventID && e.Status != "completed" })
 	})
 	d.Assignments = append(d.Assignments, evaluation.Assignments...)

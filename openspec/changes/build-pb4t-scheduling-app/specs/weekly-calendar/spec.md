@@ -33,7 +33,7 @@ The application SHALL allow a planner to create, edit, and delete an event with 
 - **THEN** the editor retains all three constraints and submits them with the proposed event for validation
 
 ### Requirement: Validate before saving an event placement
-The application SHALL preview an event create or move and obtain backend conflict feedback before saving it as scheduled. A conflicting placement SHALL offer explicit draft saving and resolution actions. Draft placements SHALL remain visible and participate in working-plan conflict evaluation, but SHALL NOT count as validated planned training coverage.
+The application SHALL preview an event create or move and obtain backend conflict feedback before saving it as scheduled. The event editor SHALL offer explicit draft saving and resolution actions for conflicting placements. Calendar drops SHALL save the moved placement directly without opening the editor, retaining draft status or downgrading a scheduled event to draft when the weekly plan is infeasible, unless that event has an explicit conflict waiver. Draft placements SHALL remain visible and participate in working-plan conflict evaluation, but SHALL NOT count as validated planned training coverage.
 
 #### Scenario: Add a conflicting event
 - **WHEN** a planner proposes an event that competes with an existing event for a required named participant
@@ -42,8 +42,14 @@ The application SHALL preview an event create or move and obtain backend conflic
 
 #### Scenario: Move an event into a conflict
 - **WHEN** a planner drags an event into a time with insufficient asset capacity
-- **THEN** the application previews the new position and displays the asset conflict
-- **AND** the saved event retains its previous position unless the planner explicitly saves a draft or applies a valid alternative
+- **THEN** the application previews the new position and saves it as a draft on drop without opening the event editor
+- **AND** the calendar and attention pane display the asset conflict without treating the placement as validated scheduled training
+
+#### Scenario: Save a drop while unrelated conflicts remain
+- **WHEN** a planner drops a movable event into a new slot and the week has unrelated conflicts
+- **THEN** the new time and requested time persist without requiring the event editor or a conflict-free week
+- **AND** the backend preserves event details and duration, retains drafts, and downgrades scheduled status to draft if the weekly plan is infeasible unless the event has an explicit waiver
+- **AND** fixed or completed events cannot be moved, and failed saves leave the saved placement unchanged and display an error
 
 ### Requirement: Review schedule changes before application
 The application SHALL present proposed event moves, personnel assignment changes, resolved conflicts, remaining issues, soft tradeoffs, and projected training coverage before the planner applies a proposal. Canceling SHALL preserve the saved calendar.
@@ -85,3 +91,12 @@ The Add event action SHALL offer a template picker. Choosing a template SHALL po
 - **WHEN** a planner creates an event template
 - **THEN** the editor requests reusable defaults without calendar dates
 - **AND** the saved definition becomes available in the event picker
+
+### Requirement: Event conflict ignore controls
+The event editor SHALL expose an Ignore conflicts checkbox and, when enabled, a description text box. Both values SHALL persist across reload/restart. An ignored event SHALL be saveable even while other plan conflicts remain. Calendar details SHALL identify ignored status and its description; the editor SHALL explain the waiver rather than report ignored constraints as satisfied. The editor SHALL not offer direct resolution for an ignored event. Ignore settings SHALL belong to occurrences and SHALL not be inherited through template creation or scheduling.
+
+#### Scenario: Save an event-specific waiver
+- **WHEN** the user checks Ignore conflicts, enters a description, and saves the event
+- **THEN** reopening the event shows the checked setting and saved description
+- **AND** the event remains visible at its chosen calendar time with an ignored indicator
+- **AND** the description is distinct from the event's ordinary description

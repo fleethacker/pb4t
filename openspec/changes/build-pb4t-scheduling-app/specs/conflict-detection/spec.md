@@ -61,3 +61,17 @@ Each conflict SHALL include its type, rule identifier where applicable, affected
 - **WHEN** an event cannot be staffed
 - **THEN** the result explains the missing qualification coverage and which commitments restrict the candidate people
 - **AND** the UI can link the explanation to the affected records
+
+### Requirement: Explicit per-event conflict waiver
+A planner SHALL be able to mark an event Ignore conflicts and persist an optional description with that occurrence. The deterministic evaluator SHALL exclude ignored events from scheduling constraints, shared personnel/asset demand, incompatibility comparisons in both directions, and completed-event rest restrictions. Structural data validation SHALL still apply. Clearing the setting SHALL restore ordinary checks. Existing events SHALL default to not ignored.
+
+#### Scenario: Waive an overlapping event
+- **WHEN** a planner marks one of two competing events ignored
+- **THEN** its own violations and its participation in shared conflicts are waived
+- **AND** only non-ignored events reserve personnel and assets during evaluation
+- **AND** unrelated conflicts remain visible and enforced
+
+#### Scenario: Restore event checks
+- **WHEN** a planner clears Ignore conflicts
+- **THEN** the event participates in normal conflict evaluation again
+- **AND** the saved description is retained

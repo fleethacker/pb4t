@@ -82,24 +82,26 @@ func (t EventTemplate) Occurrence(start, windowStart, windowEnd time.Time) Event
 }
 
 type Event struct {
-	SourceRef      *SourceReference `json:"source_ref,omitempty"`
-	Description    string           `json:"description,omitempty"`
-	ID             string           `json:"id"`
-	TemplateID     string           `json:"template_id,omitempty"`
-	Name           string           `json:"name"`
-	DepartmentID   string           `json:"department_id"`
-	Contact        string           `json:"contact"`
-	Type           string           `json:"type"`
-	Tags           []string         `json:"tags"`
-	Start          time.Time        `json:"start"`
-	RequestedStart time.Time        `json:"requested_start"`
-	Duration       int              `json:"duration"`
-	WindowStart    time.Time        `json:"window_start"`
-	WindowEnd      time.Time        `json:"window_end"`
-	Fixed          bool             `json:"fixed"`
-	Status         string           `json:"status"`
-	ConstraintIDs  []string         `json:"constraint_ids"`
-	Fatigue        bool             `json:"fatigue"`
+	IgnoreConflicts            bool             `json:"ignore_conflicts,omitempty"`
+	IgnoreConflictsDescription string           `json:"ignore_conflicts_description,omitempty"`
+	SourceRef                  *SourceReference `json:"source_ref,omitempty"`
+	Description                string           `json:"description,omitempty"`
+	ID                         string           `json:"id"`
+	TemplateID                 string           `json:"template_id,omitempty"`
+	Name                       string           `json:"name"`
+	DepartmentID               string           `json:"department_id"`
+	Contact                    string           `json:"contact"`
+	Type                       string           `json:"type"`
+	Tags                       []string         `json:"tags"`
+	Start                      time.Time        `json:"start"`
+	RequestedStart             time.Time        `json:"requested_start"`
+	Duration                   int              `json:"duration"`
+	WindowStart                time.Time        `json:"window_start"`
+	WindowEnd                  time.Time        `json:"window_end"`
+	Fixed                      bool             `json:"fixed"`
+	Status                     string           `json:"status"`
+	ConstraintIDs              []string         `json:"constraint_ids"`
+	Fatigue                    bool             `json:"fatigue"`
 }
 
 func (e Event) End() time.Time { return e.Start.Add(time.Duration(e.Duration) * time.Minute) }
@@ -184,6 +186,7 @@ type DepartmentProposal struct {
 	Evaluation          Evaluation   `json:"evaluation"`
 }
 type Proposal struct {
+	TargetEventID       string               `json:"target_event_id,omitempty"`
 	ID                  string               `json:"id"`
 	Week                time.Time            `json:"week"`
 	Status              string               `json:"status"`

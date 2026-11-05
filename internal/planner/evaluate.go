@@ -39,12 +39,22 @@ func tooClose(a, b, c, d time.Time, minutes int) bool {
 	return Overlap(a, b, c.Add(-gap), d.Add(gap))
 }
 
+// FeasibleFor checks one event's conflicts, or the whole plan when eventID is empty.
+func (e Evaluation) FeasibleFor(eventID string) bool {
+	if eventID == "" {
+		return e.Feasible
+	}
+	return !slices.ContainsFunc(e.Conflicts, func(c Conflict) bool {
+		return slices.Contains(c.EventIDs, eventID)
+	})
+}
+
 // Evaluate performs the same joint resource and staffing check for every caller.
 func Evaluate(d Data, events []Event) Evaluation {
 	out := Evaluation{Conflicts: []Conflict{}, Warnings: []Conflict{}, Assignments: []Assignment{}, Coverage: []Coverage{}}
 	active := []Event{}
 	for _, e := range events {
-		if e.Status != "completed" {
+		if e.Status != "completed" && !e.IgnoreConflicts {
 			active = append(active, e)
 		}
 	}
@@ -115,6 +125,7 @@ func Evaluate(d Data, events []Event) Evaluation {
 				}
 			}
 		}
+		reported := [][]string{}
 		for _, point := range demands {
 			sum := 0
 			ids := []string{}
@@ -124,9 +135,9 @@ func Evaluate(d Data, events []Event) Evaluation {
 					ids = append(ids, x.e.ID)
 				}
 			}
-			if sum > a.Capacity {
+			if sum > a.Capacity && !slices.ContainsFunc(reported, func(previous []string) bool { return slices.Equal(previous, ids) }) {
 				add("asset", point.rule, fmt.Sprintf("%s: concurrent demand %d exceeds capacity %d.", a.Name, sum, a.Capacity), ids, []string{a.ID}, point.e.Start, point.e.End())
-				break
+				reported = append(reported, ids)
 			}
 		}
 	}
@@ -166,7 +177,7 @@ func Evaluate(d Data, events []Event) Evaluation {
 						continue
 					}
 					for _, history := range d.Events {
-						if history.ID == a.EventID && history.Status == "completed" && history.Fatigue && e.Fatigue && tooClose(e.Start, e.End(), history.Start, history.End(), restFor(d, e)) {
+						if history.ID == a.EventID && history.Status == "completed" && !history.IgnoreConflicts && history.Fatigue && e.Fatigue && tooClose(e.Start, e.End(), history.Start, history.End(), restFor(d, e)) {
 							ok = false
 							s.blocked = append(s.blocked, p.Name+": rest after "+history.Name)
 						}

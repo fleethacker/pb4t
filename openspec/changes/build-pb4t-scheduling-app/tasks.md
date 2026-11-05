@@ -151,3 +151,15 @@
 - [x] 23.1 Bundle the existing local application image and chart as a UDS/Zarf package with deployment-time chart value overrides.
 - [x] 23.2 Add opt-in UDS Core exposure and Keycloak/Authservice configuration for the entire UI/API, matching selectors, hostname/group settings, and optional OpenAI TLS egress.
 - [x] 23.3 Document platform prerequisites and deployment/login verification, and validate chart variants, the official UDS Package schema, and built archives without changing existing clusters.
+
+## 24. Per-event conflict ignore controls
+
+- [x] 24.1 Persist an occurrence-only Ignore conflicts checkbox and description, with editor/calendar feedback and backward-compatible defaults.
+- [x] 24.2 Waive ignored-event conflicts, preserve ignored events during generation/apply, and exclude them from departmental AI input and accepted suggestions.
+- [x] 24.3 Manually verify persistence, waiver/re-enable behavior, solver/apply preservation, AI exclusion/rejection, and browser controls on isolated data.
+
+## 25. Save calendar drops directly
+
+- [x] 25.1 Save dropped event times without opening the editor, preserving current details and validating under the backend lock.
+- [x] 25.2 Retain drafts and downgrade non-waived scheduled moves when weekly conflicts remain; keep conflict feedback visible.
+- [x] 25.3 Manually verify direct drop persistence, preserved details, rejected moves, and scheduled/draft behavior on isolated demo data.

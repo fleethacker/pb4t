@@ -36,7 +36,7 @@ func ExpandRequirements(d Data, w time.Time) Data {
 func AddMissing(d Data, events []Event, w time.Time) []Event {
 	intended := slices.Clone(events)
 	for i := range intended {
-		if intended[i].Status != "completed" {
+		if intended[i].Status != "completed" && !intended[i].IgnoreConflicts {
 			intended[i].Status = "scheduled"
 		}
 	}
@@ -109,28 +109,34 @@ func less(a, b [3]int) bool {
 	return false
 }
 
-func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Event) Proposal {
+// Solve searches the weekly plan, or only target's placement when target is set.
+func Solve(d Data, w time.Time, target *Event, prefs []Preference, baseline []Event) Proposal {
 	original := baseline
 	events := WeekEvents(d, w)
-	if anchor != nil {
+	if target != nil {
 		found := false
 		for i := range events {
-			if events[i].ID == anchor.ID {
-				events[i] = *anchor
+			if events[i].ID == target.ID {
+				events[i] = *target
 				found = true
 			}
 		}
 		if !found {
-			events = append(events, *anchor)
+			events = append(events, *target)
 		}
 	}
-	events = AddMissing(d, events, w)
+	if target == nil {
+		events = AddMissing(d, events, w)
+	}
 	for i := range events {
-		if events[i].Status != "completed" {
+		if events[i].Status != "completed" && !events[i].IgnoreConflicts && (target == nil || events[i].ID == target.ID) {
 			events[i].Status = "scheduled"
 		}
 	}
 	p := Proposal{Week: w, Status: "no_solution_found", Events: []Event{}, Changes: []Change{}, Unscheduled: []Event{}, Negotiation: []DepartmentProposal{}, PreviousAssignments: d.Assignments, Summary: "No complete plan found within the bounded search."}
+	if target != nil {
+		p.TargetEventID = target.ID
+	}
 	type variable struct {
 		e     Event
 		slots []time.Time
@@ -138,7 +144,7 @@ func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Ev
 	vars := []variable{}
 	placed := []Event{}
 	for _, e := range events {
-		if e.Fixed || e.Status == "completed" || (anchor != nil && e.ID == anchor.ID) {
+		if e.Fixed || e.IgnoreConflicts || e.Status == "completed" || (target != nil && e.ID != target.ID) {
 			placed = append(placed, e)
 			continue
 		}
@@ -198,11 +204,11 @@ func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Ev
 		if i == len(vars) {
 			evaluation := Evaluate(d, placed)
 			for _, c := range evaluation.Coverage {
-				if !c.Requirement.End.After(w.AddDate(0, 0, 7)) && c.Gap > 0 {
+				if target == nil && !c.Requirement.End.After(w.AddDate(0, 0, 7)) && c.Gap > 0 {
 					return
 				}
 			}
-			if evaluation.Feasible {
+			if evaluation.FeasibleFor(p.TargetEventID) {
 				best = sc
 				p.Events = slices.Clone(placed)
 				p.Evaluation = evaluation
@@ -216,7 +222,7 @@ func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Ev
 			e := v.e
 			e.Start = t
 			placed = append(placed, e)
-			if Evaluate(d, placed).Feasible {
+			if Evaluate(d, placed).FeasibleFor(p.TargetEventID) {
 				search(i + 1)
 			}
 			placed = placed[:len(placed)-1]
@@ -225,30 +231,15 @@ func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Ev
 			}
 		}
 	}
-	if Evaluate(d, placed).Feasible {
+	if Evaluate(d, placed).FeasibleFor(p.TargetEventID) {
 		search(0)
 	}
 	if p.Status != "feasible" {
-		// Retry without anchoring only as an explicitly labeled alternative.
-		if anchor != nil && !anchor.Fixed {
-			copyData := d
-			copyData.Events = slices.Clone(d.Events)
-			found := false
-			for i := range copyData.Events {
-				if copyData.Events[i].ID == anchor.ID {
-					copyData.Events[i] = *anchor
-					found = true
-				}
-			}
-			if !found {
-				copyData.Events = append(copyData.Events, *anchor)
-			}
-			alt := Solve(copyData, w, nil, prefs, baseline)
-			if alt.Status == "feasible" {
-				alt.Alternate = true
-				alt.Summary = "Alternative: the requested event time must change. Review the new time before applying."
-				return alt
-			}
+		if target != nil {
+			p.Events = events
+			p.Evaluation = Evaluate(d, events)
+			p.Summary = "No feasible placement found for this event while keeping all other events unchanged. Review the reported conflicts or resolve the weekly plan."
+			return p
 		}
 		p.Events = partial
 		p.Evaluation = Evaluate(d, events)
@@ -269,9 +260,24 @@ func Solve(d Data, w time.Time, anchor *Event, prefs []Preference, baseline []Ev
 		return p
 	}
 	p.Summary = "Recommended feasible plan. All included events are staffed and supplied hard constraints are satisfied. Review changes before applying."
+	if slices.ContainsFunc(p.Events, func(e Event) bool { return e.IgnoreConflicts }) {
+		p.Summary = "Recommended plan. Conflicts on ignored events were waived and their saved times were retained. All other hard constraints are satisfied. Review changes before applying."
+	}
+	if target != nil {
+		p.Summary = "Recommended placement for this event. All other events are unchanged. Review the suggested time before applying."
+		if !p.Evaluation.Feasible {
+			p.Summary += " Unrelated conflicts remain elsewhere in the weekly plan."
+		}
+	}
 	for _, e := range p.Events {
+		if e.IgnoreConflicts {
+			continue
+		}
 		var before *time.Time
 		reason := "Added to close a training gap"
+		if target != nil {
+			reason = "Placed this event while keeping all other events unchanged"
+		}
 		for _, old := range original {
 			if e.ID == old.ID {
 				b := old.Start

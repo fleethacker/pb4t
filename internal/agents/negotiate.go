@@ -21,7 +21,9 @@ func (c *Client) Negotiate(ctx context.Context, runID string, d planner.Data, w 
 	for round := 1; round <= 2; round++ {
 		departments := []planner.Department{}
 		for _, dep := range d.Departments {
-			if !slices.ContainsFunc(planner.WeekEvents(candidate, w), func(e planner.Event) bool { return e.DepartmentID == dep.ID && !e.Fixed && e.Status != "completed" }) {
+			if !slices.ContainsFunc(planner.WeekEvents(candidate, w), func(e planner.Event) bool {
+				return e.DepartmentID == dep.ID && !e.Fixed && !e.IgnoreConflicts && e.Status != "completed"
+			}) {
 				continue
 			}
 			if round == 2 && len(feedback[dep.ID]) == 0 {
@@ -111,7 +113,7 @@ func mergePlacements(events []planner.Event, proposals []planner.DepartmentPropo
 	for _, p := range proposals {
 		for _, pref := range p.Preferences {
 			for i := range merged {
-				if merged[i].ID == pref.EventID {
+				if merged[i].ID == pref.EventID && !merged[i].IgnoreConflicts {
 					merged[i].Start = pref.Start
 				}
 			}
@@ -155,7 +157,7 @@ func actionable(d planner.Data, events []planner.Event) map[string][]planner.Con
 		}
 		owners := map[string]bool{}
 		for _, e := range events {
-			if !e.Fixed && e.Status != "completed" && slices.Contains(conflict.EventIDs, e.ID) {
+			if !e.Fixed && !e.IgnoreConflicts && e.Status != "completed" && slices.Contains(conflict.EventIDs, e.ID) {
 				owners[e.DepartmentID] = true
 			}
 		}

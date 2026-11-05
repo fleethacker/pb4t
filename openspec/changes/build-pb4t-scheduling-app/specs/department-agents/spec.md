@@ -35,3 +35,15 @@ The system SHALL provide a concise persisted summary of departmental requests, a
 - **WHEN** combined proposals conflict only over an asset used by two departments
 - **THEN** those two departments receive the shared conflict for revision
 - **AND** other departments make no second-round model request
+
+### Requirement: Exclude ignored events from negotiation
+Departmental AI calendar input SHALL omit events marked Ignore conflicts. The coordinator SHALL skip departments with no non-ignored movable events. Ignored events SHALL not receive actionable revision feedback or accepted AI placement preferences. Backend validation SHALL reject a model submission that references an ignored event even if the model returns one.
+
+#### Scenario: Ignore a department's only movable event
+- **WHEN** all of a department's movable events are ignored
+- **THEN** that department makes no negotiation request
+- **AND** other departments can still negotiate their own non-ignored events
+
+#### Scenario: Model attempts an ignored placement
+- **WHEN** a model submits a placement for an ignored event
+- **THEN** the backend rejects the submission without applying it

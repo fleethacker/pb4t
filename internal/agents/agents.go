@@ -123,12 +123,13 @@ func (c *Client) Department(ctx context.Context, d planner.Data, w time.Time, de
 	for _, p := range prior {
 		summaries = append(summaries, priorSummary{p.DepartmentID, p.Summary, p.Preferences})
 	}
-	contextData, err := json.Marshal(map[string]any{"week": w, "events": planner.WeekEvents(d, w), "departments": d.Departments, "people": d.People, "qualifications": d.Qualifications, "duties": d.Duties, "assets": d.Assets, "constraints": d.Constraints, "requirements": d.Requirements, "prior_proposals": summaries, "actionable_conflicts": conflicts})
+	events := slices.DeleteFunc(planner.WeekEvents(d, w), func(e planner.Event) bool { return e.IgnoreConflicts })
+	contextData, err := json.Marshal(map[string]any{"week": w, "events": events, "departments": d.Departments, "people": d.People, "qualifications": d.Qualifications, "duties": d.Duties, "assets": d.Assets, "constraints": d.Constraints, "requirements": d.Requirements, "prior_proposals": summaries, "actionable_conflicts": conflicts})
 	if err != nil {
 		return p, err
 	}
 	message, _ := json.Marshal(map[string]string{"role": "user", "content": string(contextData)})
-	instructions := fmt.Sprintf("You are the %s scheduling agent. Department ID: %s. Goal: %s. Round %d of 2. All planning data is supplied. Submit exactly one structured proposal, with at most one preferred start per event; no lists of fallback alternatives. Propose changes only to your own department's movable, non-completed events. Preserve all other events. Use RFC3339 dates within each event's scheduling window. In round 2 the events already contain the merged proposals: revise only in response to actionable_conflicts. Do not try to fix unrelated departments' conflicts. Keep summary and reasons concise. The backend validates your submission and performs the final search; you do not need to perform exhaustive scheduling or repeat validation yourself. Empty preferences retain the snapshot placements. Only submit_department_proposal is available.", dep.Name, dep.ID, dep.Goal, round)
+	instructions := fmt.Sprintf("You are the %s scheduling agent. Department ID: %s. Goal: %s. Round %d of 2. All planning data is supplied. Submit exactly one structured proposal, with at most one preferred start per event; no lists of fallback alternatives. Propose changes only to your own department's movable, non-completed events in the supplied calendar. Events marked Ignore conflicts are excluded from the calendar and must not be proposed or discussed. Constraints targeting excluded events do not require resolution. Preserve all other events. Use RFC3339 dates within each event's scheduling window. In round 2 the events already contain the merged proposals: revise only in response to actionable_conflicts. Do not try to fix unrelated departments' conflicts. Keep summary and reasons concise. The backend validates your submission and performs the final search; you do not need to perform exhaustive scheduling or repeat validation yourself. Empty preferences retain the snapshot placements. Only submit_department_proposal is available.", dep.Name, dep.ID, dep.Goal, round)
 	trace, _ := ctx.Value(traceKey{}).(string)
 	result, err := c.request(ctx, trace, 1, instructions, tools, []json.RawMessage{message}, "submit_department_proposal")
 	if err != nil {
@@ -160,7 +161,7 @@ func (c *Client) Department(ctx context.Context, d planner.Data, w time.Time, de
 		seen := map[string]bool{}
 		for _, pref := range x.Preferences {
 			i := slices.IndexFunc(d.Events, func(e planner.Event) bool { return e.ID == pref.EventID })
-			if i < 0 || d.Events[i].DepartmentID != dep.ID || d.Events[i].Fixed || d.Events[i].Status == "completed" || pref.Start.IsZero() {
+			if i < 0 || d.Events[i].DepartmentID != dep.ID || d.Events[i].Fixed || d.Events[i].IgnoreConflicts || d.Events[i].Status == "completed" || pref.Start.IsZero() {
 				return p, fmt.Errorf("preference must reference your own movable event and a valid time")
 			}
 			if seen[pref.EventID] {

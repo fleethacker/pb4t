@@ -72,8 +72,11 @@ func ValidateEvent(e Event) error {
 	if e.Duration < 15 || e.Duration%15 != 0 {
 		return fmt.Errorf("duration must be a positive multiple of 15 minutes")
 	}
-	if e.Start.IsZero() || e.WindowStart.IsZero() || e.WindowEnd.IsZero() || !e.WindowEnd.After(e.WindowStart) {
-		return fmt.Errorf("event requires a start and a valid scheduling window")
+	if e.Start.IsZero() {
+		return fmt.Errorf("event requires a start time")
+	}
+	if !e.WindowStart.IsZero() && !e.WindowEnd.IsZero() && !e.WindowEnd.After(e.WindowStart) {
+		return fmt.Errorf("latest allowed end must be after earliest allowed start")
 	}
 	if e.Status != "draft" && e.Status != "scheduled" && e.Status != "completed" {
 		return fmt.Errorf("unknown event status")
