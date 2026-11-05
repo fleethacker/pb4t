@@ -139,3 +139,9 @@
 
 - [x] 21.1 Evaluate potentially competing personnel groups independently and keep agent feedback scoped to each failed group.
 - [x] 21.2 Reproduce the steering-drill false alert and verify real collisions, rest, role assignments, independent agent routing, and calendar feedback against the captured live dataset.
+
+## 22. Docker and Helm deployment
+
+- [x] 22.1 Add a self-contained Docker image, local persistent Compose configuration, and configurable listener while preserving native startup defaults.
+- [x] 22.2 Add a single-instance Helm chart with persistent storage, optional existing Secret, probes, and deployment instructions.
+- [x] 22.3 Verify image startup, HTTP access, container replacement/data retention, and rendered chart configuration variants without changing existing user deployments.

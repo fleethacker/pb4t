@@ -77,7 +77,7 @@ func main() {
 	mux.HandleFunc("POST /api/documents/{id}/suggestions/{suggestion}/create", a.reviewSuggestion)
 	files := http.FileServer(http.Dir("web/dist"))
 	mux.Handle("/", files)
-	srv := &http.Server{Addr: "127.0.0.1:" + env("PORT", "8080"), Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	srv := &http.Server{Addr: net.JoinHostPort(env("LISTEN_HOST", "127.0.0.1"), env("PORT", "8080")), Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	listener, err := net.Listen("tcp", srv.Addr)
 	if err != nil {
 		log.Fatal(err)

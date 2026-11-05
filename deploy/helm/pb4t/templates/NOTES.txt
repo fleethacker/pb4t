@@ -1,0 +1,10 @@
+PB4T is installed as a single instance with SQLite storage.
+
+Open the planner locally:
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "pb4t.fullname" . }} 8080:{{ .Values.service.port }}
+  http://localhost:8080
+
+{{- if and .Values.persistence.enabled .Values.persistence.retain (not .Values.persistence.existingClaim) }}
+
+The data claim is retained when this release is uninstalled.
+{{- end }}

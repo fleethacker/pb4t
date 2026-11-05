@@ -1,0 +1,36 @@
+fullnameOverride: ""
+
+image:
+  repository: pb4t-planner
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+config:
+  timezone: America/New_York
+  openaiModel: gpt-5-mini
+
+# Supply the API key through an existing Secret, never through chart values.
+openai:
+  existingSecret: ""
+  key: OPENAI_API_KEY
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  size: 1Gi
+  # null uses the cluster's default class; "" requests no storage class.
+  storageClass: null
+  retain: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "2"
+    memory: 512Mi

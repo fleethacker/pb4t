@@ -1,6 +1,6 @@
 # Implementation verification
 
-Date: 2026-11-04. Progress: 79/79 tasks complete. Implementation and manual verification, including scoped personnel conflict reporting, are complete.
+Date: 2026-11-05. Progress: 82/82 tasks complete. Implementation and manual verification, including Docker packaging and Helm configuration validation, are complete.
 
 ## Build and local operation
 
@@ -161,3 +161,13 @@ No automated test suite was added, per the requested hackathon scope. No branch,
 - Replayed the captured live snapshot through the actual evaluator and solver. Generation remained feasible with 25 events, zero hard conflicts, no unscheduled events, and no training gaps in 3.046 seconds. The source snapshot was unchanged. Browser verification on a temporary database copy confirmed no steering-card warning, a green event-specific result with its two personnel assignments, and the true Monday Engineering personnel conflict. The editor identifies other weekly-plan conflicts separately while preserving complete-plan save validation.
 - Compared the complete copied planning dataset after UI inspection and validation with the captured source: unchanged. Screenshot: ignored `.cache/pb4t-steering-conflict-fixed.png`. Manual replays are under ignored `.cache/debug/check-steering-alert.go` and `check-staffing-groups.go`.
 - Go build/vet, frontend TypeScript/production build, formatting checks, and strict OpenSpec validation passed. Automated tests were skipped under the retained hackathon scope. The owned preview on port 8086 was stopped; the user's running app/database was not changed. Restart the user's app to load the corrected backend. No additional commit or push was made.
+
+## Docker and Helm deployment
+
+- Committed the completed staffing correction as `33026dc` at the user's request before this work. Deployment changes remain uncommitted.
+- Added a multi-stage Dockerfile, credential/data/cache exclusions, a non-root distroless runtime, persistent Compose service, and `LISTEN_HOST` configuration. A native binary check confirmed the default listener remains `127.0.0.1`; published container HTTP access confirmed the explicit all-interface container listener works.
+- Built and loaded ARM64 and AMD64 image variants using a temporary local Docker runtime and separate credential-free client configuration. The image's frontend TypeScript/Vite build and static Go build completed successfully. The ARM64 Compose service served the UI, its JavaScript/CSS assets, and the 24-event API without an OpenAI key. The AMD64 image also started under local emulation and served the seeded API. Images were not pushed to a registry.
+- Changed a synthetic department record and uploaded a generated PDF larger than 1 MiB, exercising multipart temporary storage with a read-only container root filesystem. Forced container replacement using the same named volume, then verified the changed planning record and the exact original PDF bytes/hash were retained. No AI request was made. Runtime logs used standard output/error.
+- Image inspection verified runtime UID/group `65532`, an owned writable data directory, certificate roots, and absence of local application credentials, caches, or databases. Only test data was used; the user's existing calendars and Docker profiles were not started or changed.
+- Helm 4.3.0 strict lint and chart packaging passed. Rendered and inspected default persistence, an existing PVC/Secret, ephemeral storage, and explicit empty StorageClass variants. Verified single-replica Recreate updates, matching selectors, data paths, non-root/fsGroup settings, probes, claim retention, and Secret references. Schema validation rejects unsupported replica counts and inline API-key fields. The default chart also rendered against Kubernetes 1.27 capabilities. No live Kubernetes deployment was performed.
+- Go build/vet, Compose configuration checks, formatting checks, and strict OpenSpec validation passed. Manual scripts/logs and the packaged chart are under ignored `.cache/debug/`; temporary tool binaries/configuration are under ignored `.cache/`. Automated tests were not added under the retained hackathon scope. The temporary containers and Docker runtime were removed after validation, without changing the user's active context. No additional commit or push was made.

@@ -1,0 +1,17 @@
+.git
+.env*
+**/.env*
+.cache
+.codex
+.agents
+data
+bin
+node_modules
+**/node_modules
+web/dist
+openspec
+*.db
+*.db-shm
+*.db-wal
+*.log
+.DS_Store

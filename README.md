@@ -31,6 +31,20 @@ npm run reset-demo
 npm start
 ```
 
+## Run with Docker
+
+With Docker and Docker Compose available and the Docker engine running:
+
+```sh
+docker compose up --build -d
+```
+
+Open **http://localhost:8080**. Go and Node.js are built inside the image, so neither is needed on the host. The named `planner-data` volume stores SQLite and the original uploaded PDFs. `docker compose down` stops the app while retaining this volume. Containers run as a non-root user with a read-only root filesystem and writable data/temporary storage.
+
+Compose uses the existing optional `.env` for `OPENAI_API_KEY`, `OPENAI_MODEL`, `SHIP_TIMEZONE`, and the published `PORT`; keys and local databases are excluded from image builds. Without a key, deterministic planning remains available. To use another host port, run `PORT=8087 docker compose up --build -d` and open that port. View logs with `docker compose logs -f planner`.
+
+For Kubernetes, use the [Helm chart instructions](deploy/helm/pb4t/README.md). The chart runs one instance with a persistent SQLite volume and can reference an existing OpenAI-key Secret.
+
 ## Optional live AI
 
 Core calendar editing, conflict checks, training coverage, and deterministic weekly generation work without a key. To enable real departmental negotiation and free-form constraint interpretation, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, and restart. The key stays on the server. `OPENAI_MODEL` defaults to `gpt-5-mini`; use a Responses API model available to your account. Live AI needs internet access and API quota. API errors are displayed as failed runs; the application does not fabricate negotiation.
@@ -40,6 +54,7 @@ Optional settings in `.env` or environment variables:
 | Setting | Default |
 | --- | --- |
 | `PORT` | `8080` |
+| `LISTEN_HOST` | `127.0.0.1` (containers use `0.0.0.0`) |
 | `DATABASE_PATH` | `./data/scheduler.db` |
 | `SHIP_TIMEZONE` | `America/New_York` |
 | `OPENAI_MODEL` | `gpt-5-mini` |
