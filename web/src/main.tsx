@@ -42,6 +42,9 @@ import { RuleFields } from "./RuleFields";
 import { calendarEntries } from "./calendar-overlay";
 
 const uid = () => crypto.randomUUID();
+const tiers = [1, 2, 3, 4];
+const eventTier = (event: Pick<Event, "tier">) =>
+  tiers.includes(event.tier) ? event.tier : 1;
 let zone = "America/New_York";
 function localInput(value: string) {
   if (!value || value.startsWith("0001")) return "";
@@ -102,6 +105,7 @@ function newEvent(data: Data, week: string, start?: string): Event {
     id: uid(),
     name: "",
     department_id: data.departments[0]?.id || "",
+    tier: 1,
     contact: "",
     type: "drill",
     tags: ["drill"],
@@ -122,6 +126,7 @@ function templateDefaults(e: EventTemplate): EventTemplate {
     id: e.id,
     name: e.name,
     department_id: e.department_id,
+    tier: eventTier(e),
     contact: e.contact,
     type: e.type,
     duration: e.duration,
@@ -189,6 +194,7 @@ function App() {
     [page, setPage] = useState("calendar"),
     [error, setError] = useState(""),
     [filters, setFilters] = useState<string[]>([]),
+    [tierFilters, setTierFilters] = useState<number[]>([]),
     [editing, setEditing] = useState<Event | null>(null),
     [template, setTemplate] = useState(false),
     [choosingTemplate, setChoosingTemplate] = useState(false),
@@ -273,13 +279,15 @@ function App() {
         (e) => dateOnly(e.start) >= day && dateOnly(e.start) <= dates[6],
       )
     : null;
-  const entries = calendarEntries(events, proposedEvents);
+  const entries = calendarEntries(events, proposedEvents).filter(
+    ({ event }) =>
+      (!filters.length || filters.includes(event.department_id)) &&
+      (!tierFilters.length || tierFilters.includes(eventTier(event))),
+  );
   const activeHighlight =
     reviewingProposal &&
     entries.some(
-      ({ event }) =>
-        event.id === highlightedEventId &&
-        (!filters.length || filters.includes(event.department_id)),
+      ({ event }) => event.id === highlightedEventId,
     )
       ? highlightedEventId
       : null;
@@ -490,6 +498,32 @@ function App() {
             </button>
           ))}
         </div>
+        <div className="sidebar-section tier-section">
+          <span className="eyebrow">TIERS</span>
+          <div className="tier-filters" aria-label="Filter by tier">
+            {tiers.map((tier) => (
+              <button
+                key={tier}
+                className={
+                  "tier-filter" +
+                  (tierFilters.includes(tier) ? " selected" : "")
+                }
+                aria-label={`Tier ${tier}`}
+                aria-pressed={tierFilters.includes(tier)}
+                onClick={() => {
+                  setPage("calendar");
+                  setTierFilters(
+                    tierFilters.includes(tier)
+                      ? tierFilters.filter((x) => x !== tier)
+                      : [...tierFilters, tier],
+                  );
+                }}
+              >
+                {tier}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="sidebar-bottom">
           <div className="local-badge">
             <Database size={15} /> Local workspace{" "}
@@ -683,10 +717,7 @@ function App() {
                       {dates.map((d) => {
                         const visible = entries
                           .filter(
-                            ({ event: e }) =>
-                              dateOnly(e.start) === d &&
-                              (!filters.length ||
-                                filters.includes(e.department_id)),
+                            ({ event: e }) => dateOnly(e.start) === d,
                           )
                           .sort(
                             (a, b) =>
@@ -729,7 +760,7 @@ function App() {
                                 isDraft =
                                   e.status === "draft" &&
                                   entry.layer !== "proposed";
-                              const description = `${label ? label + ": " : ""}${e.name} · ${stamp(e.start)} · ${e.duration} min`;
+                              const description = `${label ? label + ": " : ""}${e.name} · Tier ${eventTier(e)} · ${stamp(e.start)} · ${e.duration} min`;
                               const details = [
                                 description,
                                 department?.name,
@@ -850,6 +881,7 @@ function App() {
                                     aria-hidden="true"
                                   >
                                     <strong className="event-name">
+                                      <span className="event-tier">T{eventTier(e)}</span>{" "}
                                       {e.name}
                                     </strong>
                                     <span className="event-meta">
@@ -908,7 +940,7 @@ function App() {
                                 }
                               >
                                 <strong>{time(dragPreview.start)}</strong>
-                                <span>{dragPreview.event.name}</span>
+                                <span>T{eventTier(dragPreview.event)} · {dragPreview.event.name}</span>
                               </div>
                             )}
                           </div>
@@ -950,10 +982,13 @@ function App() {
                       </span>
                     </span>
                   )}
-                  {filters.length > 0 && (
+                  {(filters.length > 0 || tierFilters.length > 0) && (
                     <button
                       className="text-button"
-                      onClick={() => setFilters([])}
+                      onClick={() => {
+                        setFilters([]);
+                        setTierFilters([]);
+                      }}
                     >
                       Clear filters
                     </button>
@@ -1243,7 +1278,7 @@ function App() {
                   <span>
                     <strong>{t.name}</strong>
                     <small>
-                      {dep(data, t.department_id)?.name} · {t.duration} min ·{" "}
+                      {dep(data, t.department_id)?.name} · Tier {eventTier(t)} · {t.duration} min ·{" "}
                       {t.constraint_ids.length} constraints
                     </small>
                     <small>{t.contact || "No default contact"}</small>
@@ -1600,7 +1635,7 @@ function EventEditor({
   saved: () => Promise<void>;
   saveAsTemplate: (e: Event) => void;
 }) {
-  const [e, setE] = useState(event),
+  const [e, setE] = useState({ ...event, tier: eventTier(event) }),
     [ev, setEv] = useState<Evaluation | null>(null),
     [error, setError] = useState(""),
     [working, setWorking] = useState(false),
@@ -1727,6 +1762,19 @@ function EventEditor({
               onChange={(x) => change("name", x.currentTarget.value)}
               placeholder="e.g. Engineering casualty control"
             />
+          </label>
+          <label>
+            Tier
+            <select
+              value={e.tier}
+              onChange={(x) => change("tier", Number(x.currentTarget.value))}
+            >
+              {tiers.map((tier) => (
+                <option key={tier} value={tier}>
+                  {tier}
+                </option>
+              ))}
+            </select>
           </label>
           {!template && e.template_id && (
             <div className="template-inheritance">

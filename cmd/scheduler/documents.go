@@ -262,7 +262,7 @@ func (a *app) reviewSuggestion(w http.ResponseWriter, r *http.Request) {
 	source := &planner.SourceReference{DocumentID: doc.ID, Page: s.Page, Excerpt: s.Excerpt}
 	createdID := planner.ID()
 	if s.Kind == "template" {
-		d.Templates = append(d.Templates, planner.EventTemplate{ID: createdID, Name: s.Name, Description: s.Description, DepartmentID: s.DepartmentID, Contact: s.Contact, Type: s.Type, Duration: s.Duration, Tags: s.Tags, ConstraintIDs: s.ConstraintIDs, Fatigue: s.Fatigue, SourceRef: source})
+		d.Templates = append(d.Templates, planner.EventTemplate{ID: createdID, Name: s.Name, Description: s.Description, DepartmentID: s.DepartmentID, Tier: 1, Contact: s.Contact, Type: s.Type, Duration: s.Duration, Tags: s.Tags, ConstraintIDs: s.ConstraintIDs, Fatigue: s.Fatigue, SourceRef: source})
 	} else if s.Kind == "constraint" {
 		if s.Rule == nil {
 			fail(w, 400, fmt.Errorf("review the structured constraint before creating it"))

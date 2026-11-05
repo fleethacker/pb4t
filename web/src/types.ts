@@ -17,6 +17,7 @@ export type Event = {
   id: string;
   name: string;
   department_id: string;
+  tier: number;
   contact: string;
   type: string;
   tags: string[];
@@ -35,6 +36,7 @@ export type EventTemplate = Pick<
   | "id"
   | "name"
   | "department_id"
+  | "tier"
   | "contact"
   | "type"
   | "tags"

@@ -12,7 +12,8 @@ function samePlacement(a: Event, b: Event) {
     Date.parse(a.start) === Date.parse(b.start) &&
     a.duration === b.duration &&
     a.name === b.name &&
-    a.department_id === b.department_id
+    a.department_id === b.department_id &&
+    a.tier === b.tier
   );
 }
 

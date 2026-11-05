@@ -66,6 +66,9 @@ func Edit(d *Data, kind, id string, raw json.RawMessage, remove bool) error {
 	return ValidateData(*d)
 }
 func ValidateEvent(e Event) error {
+	if e.Tier < 1 || e.Tier > 4 {
+		return fmt.Errorf("event tier must be between 1 and 4")
+	}
 	if e.ID == "" || e.Name == "" || e.DepartmentID == "" {
 		return fmt.Errorf("event requires an ID, name, and department")
 	}
@@ -176,6 +179,9 @@ func ValidateData(d Data) error {
 		}
 	}
 	for _, t := range d.Templates {
+		if t.Tier < 1 || t.Tier > 4 {
+			return fmt.Errorf("template tier must be between 1 and 4")
+		}
 		if t.ID == "" || t.Name == "" || !dep(t.DepartmentID) || t.Duration < 15 || t.Duration%15 != 0 {
 			return fmt.Errorf("template requires a name, department, and duration in 15-minute increments")
 		}

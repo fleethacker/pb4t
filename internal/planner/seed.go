@@ -54,7 +54,7 @@ func Seed(loc *time.Location) Data {
 			{ID: "rest", Name: "Illustrative 120-minute minimum rest", Type: "rest", Scope: "global", Confirmed: true, Minutes: 120}},
 		Events: []Event{}, Templates: []EventTemplate{}, Requirements: []Requirement{}, Completions: []Completion{}, Assignments: []Assignment{}}
 	event := func(id, name, dep, kind string, day, hour, duration int, rules []string, fixed bool) Event {
-		return Event{ID: id, Name: name, DepartmentID: dep, Contact: "Department training officer", Type: kind, Tags: []string{kind}, Start: at(day, hour), RequestedStart: at(day, hour), Duration: duration, WindowStart: at(0, 8), WindowEnd: at(4, 17), Fixed: fixed, Status: "scheduled", ConstraintIDs: rules, Fatigue: true}
+		return Event{ID: id, Name: name, DepartmentID: dep, Tier: SuggestedTier(kind), Contact: "Department training officer", Type: kind, Tags: []string{kind}, Start: at(day, hour), RequestedStart: at(day, hour), Duration: duration, WindowStart: at(0, 8), WindowEnd: at(4, 17), Fixed: fixed, Status: "scheduled", ConstraintIDs: rules, Fatigue: true}
 	}
 	d.Events = []Event{
 		event("flight-mon", "Flight quarters", "operations", "flight", 0, 9, 120, []string{}, true),
@@ -112,7 +112,7 @@ func Seed(loc *time.Location) Data {
 			continue
 		}
 		seenTypes[e.Type] = true
-		d.Templates = append(d.Templates, EventTemplate{ID: e.TemplateID, Description: e.Description, Name: e.Name, DepartmentID: e.DepartmentID, Contact: e.Contact, Type: e.Type, Tags: e.Tags, Duration: e.Duration, ConstraintIDs: e.ConstraintIDs, Fatigue: e.Fatigue})
+		d.Templates = append(d.Templates, EventTemplate{ID: e.TemplateID, Description: e.Description, Name: e.Name, DepartmentID: e.DepartmentID, Tier: e.Tier, Contact: e.Contact, Type: e.Type, Tags: e.Tags, Duration: e.Duration, ConstraintIDs: e.ConstraintIDs, Fatigue: e.Fatigue})
 	}
 	d.Requirements = []Requirement{
 		{ID: "req-dc", Name: "Damage control periodicity", DepartmentID: "dc", Type: "damage-control", Start: at(0, 0), End: at(5, 0), Count: 2, Source: "Illustrative demo requirement — not official SFTRM policy", RepeatDays: 7},

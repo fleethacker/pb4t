@@ -3,6 +3,7 @@ package planner
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"time"
 )
 
@@ -66,6 +67,7 @@ type EventTemplate struct {
 	ID            string           `json:"id"`
 	Name          string           `json:"name"`
 	DepartmentID  string           `json:"department_id"`
+	Tier          int              `json:"tier"`
 	Contact       string           `json:"contact"`
 	Type          string           `json:"type"`
 	Tags          []string         `json:"tags"`
@@ -74,9 +76,27 @@ type EventTemplate struct {
 	Fatigue       bool             `json:"fatigue"`
 }
 
+// UnmarshalJSON supplies a tier for templates saved before tiers were introduced.
+func (t *EventTemplate) UnmarshalJSON(data []byte) error {
+	type plain EventTemplate
+	var v struct {
+		plain
+		Tier *int `json:"tier"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*t = EventTemplate(v.plain)
+	t.Tier = SuggestedTier(t.Type)
+	if v.Tier != nil {
+		t.Tier = *v.Tier
+	}
+	return nil
+}
+
 func (t EventTemplate) Occurrence(start, windowStart, windowEnd time.Time) Event {
 	return Event{ID: ID(), TemplateID: t.ID, SourceRef: t.SourceRef, Description: t.Description, Name: t.Name, DepartmentID: t.DepartmentID,
-		Contact: t.Contact, Type: t.Type, Tags: append([]string{}, t.Tags...), Duration: t.Duration,
+		Tier: t.Tier, Contact: t.Contact, Type: t.Type, Tags: append([]string{}, t.Tags...), Duration: t.Duration,
 		ConstraintIDs: append([]string{}, t.ConstraintIDs...), Fatigue: t.Fatigue,
 		Start: start, RequestedStart: start, WindowStart: windowStart, WindowEnd: windowEnd, Status: "draft"}
 }
@@ -90,6 +110,7 @@ type Event struct {
 	TemplateID                 string           `json:"template_id,omitempty"`
 	Name                       string           `json:"name"`
 	DepartmentID               string           `json:"department_id"`
+	Tier                       int              `json:"tier"`
 	Contact                    string           `json:"contact"`
 	Type                       string           `json:"type"`
 	Tags                       []string         `json:"tags"`
@@ -102,6 +123,24 @@ type Event struct {
 	Status                     string           `json:"status"`
 	ConstraintIDs              []string         `json:"constraint_ids"`
 	Fatigue                    bool             `json:"fatigue"`
+}
+
+// UnmarshalJSON also defaults tiers in legacy events and saved proposal snapshots.
+func (e *Event) UnmarshalJSON(data []byte) error {
+	type plain Event
+	var v struct {
+		plain
+		Tier *int `json:"tier"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*e = Event(v.plain)
+	e.Tier = SuggestedTier(e.Type)
+	if v.Tier != nil {
+		e.Tier = *v.Tier
+	}
+	return nil
 }
 
 func (e Event) End() time.Time { return e.Start.Add(time.Duration(e.Duration) * time.Minute) }

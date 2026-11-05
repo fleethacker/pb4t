@@ -58,6 +58,9 @@ func Open(path string, loc *time.Location, reset bool) (*Store, error) {
 			}
 		}
 	}
+	if err := s.migrateTiers(context.Background()); err != nil {
+		return fail(err)
+	}
 	return s, nil
 }
 func (s *Store) Close() error { return s.db.Close() }
