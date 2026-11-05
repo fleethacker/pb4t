@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"scheduler/internal/planner"
 	"time"
 
+	"github.com/fleethacker/pb4t/internal/planner"
 	_ "modernc.org/sqlite"
 )
 

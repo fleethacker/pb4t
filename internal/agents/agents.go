@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"scheduler/internal/planner"
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 type traceKey struct{}

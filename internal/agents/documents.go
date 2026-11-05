@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"scheduler/internal/planner"
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 func (c *Client) AnalyzeDocument(ctx context.Context, doc planner.TrainingDocument, original []byte, d planner.Data) (planner.TrainingDocument, error) {

@@ -1,0 +1,43 @@
+{{- if .Values.uds.enabled }}
+apiVersion: uds.dev/v1alpha1
+kind: Package
+metadata:
+  name: {{ include "pb4t.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pb4t.labels" . | nindent 4 }}
+spec:
+  network:
+    expose:
+      - service: {{ include "pb4t.fullname" . }}
+        selector:
+          {{- include "pb4t.selectorLabels" . | nindent 10 }}
+        gateway: tenant
+        host: {{ .Values.uds.host | quote }}
+        port: {{ .Values.service.port }}
+        targetPort: 8080
+    {{- if .Values.openai.existingSecret }}
+    allow:
+      - direction: Egress
+        selector:
+          {{- include "pb4t.selectorLabels" . | nindent 10 }}
+        remoteHost: api.openai.com
+        remoteProtocol: TLS
+        port: 443
+    {{- end }}
+  sso:
+    - name: PB4T weekly planner
+      clientId: {{ printf "uds-core-%s" (include "pb4t.fullname" .) | quote }}
+      protocol: openid-connect
+      standardFlowEnabled: true
+      publicClient: false
+      redirectUris:
+        - {{ printf "https://%s.%s/login" .Values.uds.host .Values.uds.domain | quote }}
+      enableAuthserviceSelector:
+        {{- include "pb4t.selectorLabels" . | nindent 8 }}
+      {{- with .Values.uds.allowedGroups }}
+      groups:
+        anyOf:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+{{- end }}

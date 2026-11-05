@@ -1,8 +1,17 @@
 PB4T is installed as a single instance with SQLite storage.
 
+{{- if .Values.uds.enabled }}
+
+Open the planner through UDS Core:
+  https://{{ .Values.uds.host }}.{{ .Values.uds.domain }}
+
+Keycloak login is enforced by UDS Core Authservice.
+{{- else }}
+
 Open the planner locally:
   kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "pb4t.fullname" . }} 8080:{{ .Values.service.port }}
   http://localhost:8080
+{{- end }}
 
 {{- if and .Values.persistence.enabled .Values.persistence.retain (not .Values.persistence.existingClaim) }}
 

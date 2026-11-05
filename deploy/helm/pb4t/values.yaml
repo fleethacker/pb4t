@@ -19,6 +19,14 @@ openai:
   existingSecret: ""
   key: OPENAI_API_KEY
 
+# Requires UDS Core with Keycloak and Authservice already installed.
+uds:
+  enabled: false
+  host: pb4t
+  domain: uds.dev
+  # Empty means all authenticated realm users; otherwise require any listed group.
+  allowedGroups: []
+
 persistence:
   enabled: true
   existingClaim: ""

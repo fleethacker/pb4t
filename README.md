@@ -45,6 +45,8 @@ Compose uses the existing optional `.env` for `OPENAI_API_KEY`, `OPENAI_MODEL`, 
 
 For Kubernetes, use the [Helm chart instructions](deploy/helm/pb4t/README.md). The chart runs one instance with a persistent SQLite volume and can reference an existing OpenAI-key Secret.
 
+For an existing UDS Core cluster, use the [UDS package instructions](deploy/uds/README.md). The package adds basic Keycloak sign-in through UDS Core's Authservice for the whole UI and API, with an optional group restriction. Authenticated users share the same planner and editing permissions.
+
 ## Optional live AI
 
 Core calendar editing, conflict checks, training coverage, and deterministic weekly generation work without a key. To enable real departmental negotiation and free-form constraint interpretation, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, and restart. The key stays on the server. `OPENAI_MODEL` defaults to `gpt-5-mini`; use a Responses API model available to your account. Live AI needs internet access and API quota. API errors are displayed as failed runs; the application does not fabricate negotiation.

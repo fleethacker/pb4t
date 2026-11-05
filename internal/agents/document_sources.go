@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/fleethacker/pb4t/internal/planner"
 	"rsc.io/pdf"
-	"scheduler/internal/planner"
 )
 
 const sourceReviewMissing = "Source excerpt/page could not be matched locally; verify against the original PDF"

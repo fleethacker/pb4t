@@ -1,6 +1,6 @@
 # Codex build brief: PB4T calendar conflict and resolution app
 
-This directory is a standard OpenSpec `spec-driven` change for a net-new project to be built in Codex. Use the entire directory, including the seven capability specs. Start with `proposal.md`, then `design.md`, `specs/*/spec.md`, and `tasks.md`.
+This directory is a standard OpenSpec `spec-driven` change for a net-new project to be built in Codex. Use the entire directory, including all capability specs. Start with `proposal.md`, then `design.md`, `specs/*/spec.md`, and `tasks.md`.
 
 ## Build brief
 
@@ -33,6 +33,9 @@ Follow applicable repository instructions. Do not auto-commit or auto-push. Do n
 | specs/department-agents/spec.md | Tool-driven departmental negotiation |
 | specs/training-readiness/spec.md | Configured obligations and training coverage |
 | specs/local-runtime/spec.md | One-command local startup, initialization, and optional AI configuration |
+| specs/training-document-import/spec.md | Original PDFs and editable source-cited training suggestions |
+| specs/container-deployment/spec.md | Docker Compose and persistent single-instance Helm deployment |
+| specs/uds-deployment/spec.md | UDS packaging and platform-managed Keycloak authentication |
 | tasks.md | Ordered implementation and manual demonstration checklist |
 
 ## Scope of this planning chat

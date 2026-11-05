@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"scheduler/internal/planner"
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 func (s *Store) AddDocument(ctx context.Context, doc planner.TrainingDocument, original []byte) error {

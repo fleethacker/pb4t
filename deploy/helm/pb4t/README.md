@@ -51,6 +51,19 @@ Use `openai.key` if the Secret's key has a different name. API-key values are no
 
 Other settings include `config.timezone` (`America/New_York`), `config.openaiModel` (`gpt-5-mini`), `service.type` (`ClusterIP`), `service.port` (`80`), and `resources`. Logs go to standard output/error and can be viewed with `kubectl --namespace pb4t logs deployment/pb4t`.
 
+## UDS Core and Keycloak
+
+The [UDS package](../../uds/README.md) bundles this chart and its image for an existing UDS Core installation. It enables `uds.enabled`, which emits a `uds.dev/v1alpha1` Package to expose the Service through the tenant gateway and protect all UI/API routes with Keycloak and Authservice. Ordinary chart installations leave this disabled.
+
+| Value | Default | Purpose |
+| --- | --- | --- |
+| `uds.enabled` | `false` | Create the UDS Package; requires UDS Core |
+| `uds.host` | `pb4t` | Tenant gateway subdomain |
+| `uds.domain` | `uds.dev` | UDS Core tenant domain for the HTTPS login callback |
+| `uds.allowedGroups` | `[]` | Allow any authenticated user, or require any listed Keycloak group |
+
+UDS deployments require `service.type: ClusterIP`. Supplying `openai.existingSecret` also permits TLS egress to `api.openai.com:443`. Authservice manages login and its `/login` callback; the application has no separate identity store or per-user permissions.
+
 ## Validate without deploying
 
 ```sh

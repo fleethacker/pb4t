@@ -14,6 +14,7 @@ Weekly PB4T planning must reconcile departmental drills with ship operations, sc
 - Preview proposed changes and their effects before the user applies them to the calendar.
 - Track completed and planned training against user-supplied periodicity requirements; do not treat scheduled training as completed training or claim independently verified SFTRM compliance.
 - Provide a small, synthetic shipboard demo dataset and manual walkthrough of the three requested scenarios.
+- Provide persistent Docker/Helm deployment and a UDS package with basic Keycloak sign-in through an existing UDS Core installation.
 
 ## Capabilities
 
@@ -27,6 +28,8 @@ Weekly PB4T planning must reconcile departmental drills with ship operations, sc
 - `training-readiness`: Track configured training obligations, completion history, and projected coverage from the weekly plan.
 - `training-document-import`: Retain original training PDFs and review source-cited suggestions before creating training requirements, event templates, or constraints.
 - `local-runtime`: Start the application locally with one command, automatic first-run setup, persistent data, and optional live AI configuration.
+- `container-deployment`: Build and run a self-contained image with persistent Docker Compose or single-instance Helm deployment.
+- `uds-deployment`: Package the image/chart for UDS Core, protecting the calendar and API with Keycloak/Authservice and optional group restrictions.
 
 ### Modified Capabilities
 
@@ -37,5 +40,5 @@ None. This is a new project with no existing application or specifications.
 - Introduces a frontend, backend API, relational schema, scheduling engine, and server-side OpenAI integration.
 - Uses standard OpenSpec Markdown artifacts to guide implementation in Codex. `design.md` defines the proposed architecture and `tasks.md` defines the implementation sequence.
 - Hackathon scope: one ship, one planning team, one ship-local display timezone, one week at a time, synthetic data, and a small scheduling problem. No automated tests are required; validate through manual demo scenarios.
-- External calendar synchronization, authentication/role management, live collaborative editing, production deployment hardening, arbitrary executable rules, and comprehensive edge-case handling are outside this change.
+- External calendar synchronization, application-native identity/role management, live collaborative editing, production deployment hardening, arbitrary executable rules, and comprehensive edge-case handling are outside this change. UDS authentication relies on platform-managed Keycloak/Authservice; admitted users share the same editing permissions.
 - No application code, branch, commit, or deployment is created as part of preparing this proposal.

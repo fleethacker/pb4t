@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"scheduler/internal/agents"
-	"scheduler/internal/planner"
+	"github.com/fleethacker/pb4t/internal/agents"
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 const maxDocumentSize = 20 << 20

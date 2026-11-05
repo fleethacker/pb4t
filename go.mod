@@ -1,4 +1,4 @@
-module scheduler
+module github.com/fleethacker/pb4t
 
 go 1.24.0
 

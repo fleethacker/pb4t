@@ -58,6 +58,54 @@
         "retain": { "type": "boolean" }
       }
     },
+    "uds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "host", "domain", "allowedGroups"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"
+        },
+        "allowedGroups": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
     "resources": { "type": "object" }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "uds": {
+            "properties": {
+              "enabled": { "const": true }
+            },
+            "required": ["enabled"]
+          }
+        },
+        "required": ["uds"]
+      },
+      "then": {
+        "properties": {
+          "service": {
+            "properties": {
+              "type": { "const": "ClusterIP" }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

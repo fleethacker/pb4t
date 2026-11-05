@@ -145,3 +145,9 @@
 - [x] 22.1 Add a self-contained Docker image, local persistent Compose configuration, and configurable listener while preserving native startup defaults.
 - [x] 22.2 Add a single-instance Helm chart with persistent storage, optional existing Secret, probes, and deployment instructions.
 - [x] 22.3 Verify image startup, HTTP access, container replacement/data retention, and rendered chart configuration variants without changing existing user deployments.
+
+## 23. UDS packaging and basic Keycloak integration
+
+- [x] 23.1 Bundle the existing local application image and chart as a UDS/Zarf package with deployment-time chart value overrides.
+- [x] 23.2 Add opt-in UDS Core exposure and Keycloak/Authservice configuration for the entire UI/API, matching selectors, hostname/group settings, and optional OpenAI TLS egress.
+- [x] 23.3 Document platform prerequisites and deployment/login verification, and validate chart variants, the official UDS Package schema, and built archives without changing existing clusters.

@@ -1,0 +1,8 @@
+image:
+  repository: docker.io/library/pb4t-planner
+  tag: "0.1.0"
+
+uds:
+  enabled: true
+  host: pb4t
+  domain: uds.dev

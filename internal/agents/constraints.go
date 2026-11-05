@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	"scheduler/internal/planner"
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 // ConstraintDraft separates an editable rule from interpretation guidance.

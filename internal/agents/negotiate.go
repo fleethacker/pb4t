@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"scheduler/internal/planner"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fleethacker/pb4t/internal/planner"
 )
 
 // Negotiate uses a barrier between rounds. Only this goroutine publishes progress

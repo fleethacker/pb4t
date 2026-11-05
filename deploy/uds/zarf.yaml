@@ -1,0 +1,24 @@
+kind: ZarfPackageConfig
+metadata:
+  name: pb4t
+  description: PB4T weekly planner with UDS Core Keycloak SSO
+  version: 0.1.0
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: pb4t
+    required: true
+    charts:
+      - name: pb4t
+        releaseName: pb4t
+        version: 0.1.0
+        namespace: pb4t
+        localPath: ../helm/pb4t
+        values:
+          - sourcePath: "."
+            targetPath: "."
+    images:
+      - docker.io/library/pb4t-planner:0.1.0

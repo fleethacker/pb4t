@@ -12,15 +12,16 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"scheduler/internal/agents"
-	"scheduler/internal/planner"
-	"scheduler/internal/store"
 	"slices"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 	_ "time/tzdata"
+
+	"github.com/fleethacker/pb4t/internal/agents"
+	"github.com/fleethacker/pb4t/internal/planner"
+	"github.com/fleethacker/pb4t/internal/store"
 )
 
 type app struct {
