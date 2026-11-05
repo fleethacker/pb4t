@@ -1,6 +1,6 @@
 # Implementation verification
 
-Date: 2026-11-05. Progress: 88/88 tasks complete. Implementation and manual verification, including Docker/UDS packaging and Helm configuration validation, are complete. Live UDS Core/Keycloak login has not been verified against a running platform.
+Date: 2026-11-05. Progress: 91/91 tasks complete. Implementation and manual verification, including Docker/UDS packaging and Helm configuration validation, are complete. Live UDS Core/Keycloak login has not been verified against a running platform.
 
 ## Build and local operation
 
@@ -199,3 +199,11 @@ No automated test suite was added, per the requested hackathon scope. No branch,
 - Browser verification moved the steering drill from Thursday 09:00 to Wednesday 10:15, showed the saved-draft message without the editor, and confirmed persistence after reload. Screenshot: ignored `.cache/pb4t-drop-saved.png`.
 - Manual HTTP checks verified preservation of event metadata, successful saves despite unrelated weekly conflicts, fixed/missing/invalid-time rejections without placement changes, retention of scheduled status for feasible moves, and downgrade to draft for an out-of-window move. All data belonged to the disposable `.cache/drop-autosave.db` preview; existing user calendars were not used.
 - Frontend TypeScript/production build, Go build/vet, and whitespace checks passed. Automated tests were skipped per the user's hackathon-mode instruction. No commit, push, or branch was created. Restart an already-running app to load the new backend endpoint.
+
+## Restored Ignore conflicts frontend
+
+- The current backend retained its waiver fields, evaluation rules, solver preservation, and AI exclusion, but the frontend lacked those event fields and controls. Restored the optional TypeScript fields, new-occurrence defaults, event-only checkbox and description, waived-conflict feedback, save action, and calendar icon/tooltips. Existing tier controls and direct event moves were retained. No backend or persistence changes were needed for this restoration.
+- The frontend TypeScript/production build and a separate current-backend build passed. Manual synthetic checks reconfirmed staffing/asset/incompatibility/window/rest waivers, restoration of ordinary checks, unchanged ignored events in generated proposals, skipped ignored-only departments, omitted ignored records/descriptions in departmental input, and rejection of attempted model placements. The OpenAI boundary used an in-memory transport with no external requests.
+- A temporary HTTP walkthrough saved an explicitly scheduled ignored event while unrelated conflicts remained, verified description/flag persistence across restart, generated/applied a plan while retaining the ignored occurrence, and restored its conflicts after clearing the flag. The current tier-aware model and solver were used. Walkthroughs are retained under ignored `.cache/debug/check-ignore-restored.go` and `check-ignore-restored-api.py`.
+- In a separate browser preview, enabled Ignore conflicts for the Tier 2 Damage control drill, entered a description, saved, refreshed, and reopened it. The saved checkbox/description and tier were present; its calendar tooltip indicated ignored status, its alerts were removed, and six unrelated conflicts remained. Unchecking restored the normal Resolve/draft controls; rechecking retained the description. Screenshot: ignored `.cache/pb4t-ignore-restored.png`.
+- Existing user data/running applications were not used or changed. Temporary preview processes/databases were removed after verification. No automated tests were added under the user's explicit manual-only instruction. No commit, push, or changes to the other pending tool/priority work were made.

@@ -247,7 +247,7 @@ export function Documents({
       ) : !doc ? (
         <div className="empty document-empty">
           <FileText size={36} />
-          <h3>A durable source for your training plan.</h3>
+          <h3>No training documents</h3>
           <p>
             Import a PDF to review suggested requirements, reusable activities,
             and constraints, with page references back to the original.
@@ -281,7 +281,7 @@ export function Documents({
           <div className="document-review">
             <div className="document-heading">
               <div>
-                <span className="eyebrow">PERSISTED ORIGINAL</span>
+                <span className="eyebrow">SOURCE DOCUMENT</span>
                 <h2>{doc.title}</h2>
                 <p>{doc.filename}</p>
               </div>

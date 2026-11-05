@@ -73,40 +73,55 @@ func minTime(a, b time.Time) time.Time {
 	}
 	return b
 }
-func score(events, original []Event, prefs []Preference) [3]int {
-	s := [3]int{}
+
+type planScore struct {
+	movedByTier [4]int
+	disruption  [3]int
+}
+
+func score(events, original []Event, prefs []Preference) planScore {
+	s := planScore{}
 	for _, e := range events {
 		existed := false
+		preferred := e.RequestedStart
 		for _, old := range original {
 			if e.ID == old.ID {
 				existed = true
+				preferred = old.Start
+				if !e.Start.Equal(old.Start) {
+					s.disruption[0]++
+					s.disruption[1] += int(e.Start.Sub(old.Start).Abs().Minutes())
+				}
+				break
 			}
-			if e.ID == old.ID && !e.Start.Equal(old.Start) {
-				s[0]++
-				s[1] += int(e.Start.Sub(old.Start).Abs().Minutes())
+		}
+		if !preferred.IsZero() && !e.Start.Equal(preferred) {
+			tier := e.Tier
+			if tier < 1 || tier > 4 {
+				tier = SuggestedTier(e.Type)
 			}
+			s.movedByTier[tier-1]++
 		}
 		if !existed && !e.RequestedStart.IsZero() {
-			s[1] += int(e.Start.Sub(e.RequestedStart).Abs().Minutes())
+			s.disruption[1] += int(e.Start.Sub(e.RequestedStart).Abs().Minutes())
 		}
 		if !e.RequestedStart.IsZero() && !e.Start.Equal(e.RequestedStart) {
-			s[2]++
+			s.disruption[2]++
 		}
 		for _, p := range prefs {
 			if p.EventID == e.ID && !e.Start.Equal(p.Start) {
-				s[2]++
+				s.disruption[2]++
 			}
 		}
 	}
 	return s
 }
-func less(a, b [3]int) bool {
-	for i := range a {
-		if a[i] != b[i] {
-			return a[i] < b[i]
-		}
+func less(a, b planScore) bool {
+	// Protect Tier 1 first, even when retaining it requires several lower-tier moves.
+	if cmp := slices.Compare(a.movedByTier[:], b.movedByTier[:]); cmp != 0 {
+		return cmp < 0
 	}
-	return false
+	return slices.Compare(a.disruption[:], b.disruption[:]) < 0
 }
 
 // Solve searches the weekly plan, or only target's placement when target is set.
@@ -183,10 +198,16 @@ func Solve(d Data, w time.Time, target *Event, prefs []Preference, baseline []Ev
 		}
 		vars = append(vars, variable{e, valid})
 	}
-	sort.SliceStable(vars, func(i, j int) bool { return len(vars[i].slots) < len(vars[j].slots) })
+	sort.SliceStable(vars, func(i, j int) bool {
+		// Place higher-priority events first so bounded searches try retaining them early.
+		if vars[i].e.Tier != vars[j].e.Tier {
+			return vars[i].e.Tier < vars[j].e.Tier
+		}
+		return len(vars[i].slots) < len(vars[j].slots)
+	})
 	deadline := time.Now().Add(3 * time.Second)
 	nodes := 0
-	best := [3]int{1 << 30, 1 << 30, 1 << 30}
+	var best planScore
 	partial := slices.Clone(placed)
 	var search func(int)
 	search = func(i int) {
@@ -198,7 +219,7 @@ func Solve(d Data, w time.Time, target *Event, prefs []Preference, baseline []Ev
 			partial = slices.Clone(placed)
 		}
 		sc := score(placed, original, prefs)
-		if !less(sc, best) {
+		if p.Status == "feasible" && !less(sc, best) {
 			return
 		}
 		if i == len(vars) {
@@ -212,7 +233,7 @@ func Solve(d Data, w time.Time, target *Event, prefs []Preference, baseline []Ev
 				best = sc
 				p.Events = slices.Clone(placed)
 				p.Evaluation = evaluation
-				p.Score = sc
+				p.Score = sc.disruption
 				p.Status = "feasible"
 			}
 			return
@@ -268,6 +289,8 @@ func Solve(d Data, w time.Time, target *Event, prefs []Preference, baseline []Ev
 		if !p.Evaluation.Feasible {
 			p.Summary += " Unrelated conflicts remain elsewhere in the weekly plan."
 		}
+	} else {
+		p.Summary += " Moves are prioritized by tier: prefer moving Tier 4 before Tier 3, Tier 2, and Tier 1."
 	}
 	for _, e := range p.Events {
 		if e.IgnoreConflicts {

@@ -1,5 +1,8 @@
 [tools]
+"aqua:defenseunicorns/uds-cli" = "0.39.0"
+colima = "0.10.3"
 go = "1.26.6"
+lima = "2.2.0"
 node = "24.21.0"
 
 [tasks.deps]

@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Users,
   ShieldCheck,
+  ShieldOff,
   Layers,
   ChevronLeft,
   ChevronRight,
@@ -115,6 +116,8 @@ function newEvent(data: Data, week: string, start?: string): Event {
     window_start: iso(day + "T08:00"),
     window_end: iso(addDays(day, 4) + "T17:00"),
     fixed: false,
+    ignore_conflicts: false,
+    ignore_conflicts_description: "",
     status: "draft",
     constraint_ids: [],
     fatigue: true,
@@ -250,7 +253,7 @@ function App() {
     return (
       <div className="loading">
         <Anchor size={40} />
-        <h2>Opening your planning workspace</h2>
+        <h2>Loading planner…</h2>
         {error ? (
           <p className="error">{error}</p>
         ) : (
@@ -555,25 +558,15 @@ function App() {
         <div className="workspace">
           <div className="heading">
             <div>
-              <div className="eyebrow green">PLAN TOGETHER. OPERATE READY.</div>
               <h1>
                 {page === "calendar"
-                  ? "Your week, coordinated."
+                  ? "Weekly calendar"
                   : page === "training"
-                    ? "Readiness starts here."
+                    ? "Training readiness"
                     : page === "documents"
-                      ? "Training, from the source."
-                      : "A shared planning foundation."}
+                      ? "Training documents"
+                      : "Planning inputs"}
               </h1>
-              <p>
-                {page === "calendar"
-                  ? "Bring every department into one clear, workable plan."
-                  : page === "training"
-                    ? "Track what’s complete, what’s planned, and what still needs a place."
-                    : page === "documents"
-                      ? "Import reference documents and review suggested training and constraints."
-                      : "The people, resources, and rules behind a feasible schedule."}
-              </p>
             </div>
             {page === "calendar" && (
               <div className="heading-actions">
@@ -754,9 +747,10 @@ function App() {
                                       ? "Current"
                                       : "",
                                 hasConflict =
-                                  showingOverlay && entry.layer !== "current"
+                                  !e.ignore_conflicts &&
+                                  (showingOverlay && entry.layer !== "current"
                                     ? proposedConflicts.has(e.id)
-                                    : conflicting.has(e.id),
+                                    : conflicting.has(e.id)),
                                 isDraft =
                                   e.status === "draft" &&
                                   entry.layer !== "proposed";
@@ -766,13 +760,17 @@ function App() {
                                 department?.name,
                                 e.contact && `Contact: ${e.contact}`,
                                 e.fixed && "Fixed commitment",
+                                e.ignore_conflicts &&
+                                  `Conflicts ignored${e.ignore_conflicts_description ? ": " + e.ignore_conflicts_description : ""}`,
                                 hasConflict && "Constraint conflict",
                                 isDraft && "Draft",
                                 e.description,
                               ]
                                 .filter(Boolean)
                                 .join("\n");
-                              const compactStatus = hasConflict ? (
+                              const compactStatus = e.ignore_conflicts ? (
+                                <ShieldOff size={10} />
+                              ) : hasConflict ? (
                                 <AlertTriangle size={10} />
                               ) : e.fixed ? (
                                 <LockKeyhole size={10} />
@@ -890,6 +888,9 @@ function App() {
                                       </span>
                                       <span className="event-indicators">
                                         {e.fixed && <LockKeyhole size={10} />}
+                                        {e.ignore_conflicts && (
+                                          <ShieldOff size={10} />
+                                        )}
                                         {hasConflict && <AlertTriangle size={10} />}
                                         {label && <Layers size={10} />}
                                         {isDraft && (
@@ -1022,14 +1023,14 @@ function App() {
                         <span className="icon-tile amber">
                           <AlertTriangle size={18} />
                         </span>
-                        <h3>Needs your attention</h3>
+                        <h3>Schedule conflicts</h3>
                         <span className="count-badge">
                           {ctx.evaluation.conflicts.length}
                         </span>
                       </div>
                       <p className="panel-description">
-                        Overlaps are okay. Competing requirements need a closer
-                        look.
+                        Events can overlap unless they compete for people or
+                        resources, or violate a constraint.
                       </p>
                       <ConflictList
                         evaluation={ctx.evaluation}
@@ -1091,13 +1092,13 @@ function App() {
                       <div>
                         <strong>
                           {ctx.ai_available
-                            ? "Your departments, in conversation."
-                            : "Start with a workable plan."}
+                            ? "AI scheduling enabled"
+                            : "AI scheduling not configured"}
                         </strong>
                         <p>
                           {ctx.ai_available
-                            ? "Agents negotiate alternatives. Every result is checked against your constraints."
-                            : "The scheduling engine is ready. Live AI negotiation is optional and currently unconfigured."}
+                            ? "Department agents propose alternatives checked against schedule constraints."
+                            : "You can generate schedules without AI negotiation."}
                         </p>
                       </div>
                     </div>
@@ -1230,7 +1231,7 @@ function App() {
           )}
           <footer className="workspace-footer">
             <span>
-              <Anchor size={13} /> PB4T · A clearer plan. A readier crew.
+              <Anchor size={13} /> PB4T
             </span>
             <span>Local data · Illustrative policies · {ctx.timezone}</span>
           </footer>
@@ -1372,7 +1373,7 @@ function ConflictList({
         <div className="all-clear">
           <CheckCheck size={23} />
           <strong>No hard conflicts</strong>
-          <span>All supplied constraints are satisfied.</span>
+          <span>All enforced constraints are satisfied.</span>
         </div>
       ) : (
         evaluation.conflicts.map((c, i) => (
@@ -1742,7 +1743,7 @@ function EventEditor({
                   ? "EVENT DETAILS"
                   : "NEW EVENT"}
             </span>
-            <h2>{e.name || "Make room for readiness."}</h2>
+            <h2>{e.name || (template ? "New event template" : "New event")}</h2>
           </div>
           <button
             className="icon-button"
@@ -1830,6 +1831,39 @@ function EventEditor({
                 </label>
               </div>
             </>
+          )}
+          {!template && (
+            <div className="ignore-conflicts">
+              <label className="inline-check">
+                <input
+                  type="checkbox"
+                  checked={!!e.ignore_conflicts}
+                  onChange={(x) =>
+                    change("ignore_conflicts", x.currentTarget.checked)
+                  }
+                />
+                Ignore conflicts
+              </label>
+              {e.ignore_conflicts && (
+                <>
+                  <p>
+                    This event stays on the calendar. Its conflicts are waived,
+                    and it is excluded from AI suggestions and automatic
+                    rescheduling.
+                  </p>
+                  <label>
+                    Conflict ignore description
+                    <textarea
+                      value={e.ignore_conflicts_description || ""}
+                      onChange={(x) =>
+                        change("ignore_conflicts_description", x.currentTarget.value)
+                      }
+                      placeholder="Explain why this event's conflicts can be ignored"
+                    />
+                  </label>
+                </>
+              )}
+            </div>
           )}
           <details
             className="template-overrides"
@@ -2104,16 +2138,26 @@ function EventEditor({
           {ev && (
             <div className="validation-result">
               <h3>
-                {eventConflicts.length
-                  ? "This event needs attention"
-                  : "No conflicts for this event"}
+                {e.ignore_conflicts
+                  ? "Conflicts ignored for this event"
+                  : eventConflicts.length
+                    ? "This event needs attention"
+                    : "No conflicts for this event"}
               </h3>
-              <ConflictList evaluation={{ ...ev, conflicts: eventConflicts }} />
+              {e.ignore_conflicts ? (
+                <p className="notice">
+                  Conflicts are waived for this event. Its time will be retained
+                  during resolution.
+                </p>
+              ) : (
+                <ConflictList evaluation={{ ...ev, conflicts: eventConflicts }} />
+              )}
               {otherConflicts > 0 && (
                 <p className="notice">
                   The weekly plan has {otherConflicts} other{" "}
-                  {otherConflicts === 1 ? "conflict" : "conflicts"}. Resolve the
-                  plan before saving as scheduled, or keep this event as a draft.
+                  {otherConflicts === 1 ? "conflict" : "conflicts"}.
+                  {!e.ignore_conflicts &&
+                    " Resolve the plan before saving as scheduled, or keep this event as a draft."}
                 </p>
               )}
               {ev.assignments
@@ -2181,11 +2225,11 @@ function EventEditor({
               >
                 <ShieldCheck size={15} /> Check placement
               </button>
-              {ev?.feasible ? (
+              {e.ignore_conflicts || ev?.feasible ? (
                 <button
                   className="button primary"
                   onClick={() => save(false)}
-                  disabled={working}
+                  disabled={working || !e.name}
                 >
                   Save event
                 </button>

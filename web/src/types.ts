@@ -11,6 +11,8 @@ export type SourceReference = {
   excerpt: string;
 };
 export type Event = {
+  ignore_conflicts?: boolean;
+  ignore_conflicts_description?: string;
   source_ref?: SourceReference;
   description?: string;
   template_id?: string;

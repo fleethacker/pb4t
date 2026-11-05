@@ -19,11 +19,16 @@ The event detail sidebar SHALL resolve a proposed new or moved event by searchin
 - **AND** unrelated conflicts remain visible and staffing records for unrelated unresolved events are retained
 
 ### Requirement: Preserve hard rules and minimize disruption
-The system SHALL reject candidates violating hard constraints or mandatory coverage. Among complete feasible candidates it SHALL prefer fewer existing events moved, then smaller time deviation, then fewer soft preference violations. It SHALL NOT silently drop desired events, move fixed commitments, or relax hard constraints.
+The system SHALL reject candidates violating hard constraints or mandatory coverage. Among complete feasible candidates it SHALL first minimize changed placements by tier, comparing Tier 1 (highest priority), then Tier 2, Tier 3, and Tier 4 (lowest priority). Changed placements SHALL be measured against saved starts for existing events and requested starts for new events. Equal tier move counts SHALL prefer fewer existing events moved, then smaller time deviation, then fewer soft preference violations. Department agents SHALL use the same tier priority guidance. It SHALL NOT silently drop desired events, move fixed commitments, or relax hard constraints.
 
 #### Scenario: Choose between feasible repairs
-- **WHEN** one feasible repair moves one existing event and another moves three
+- **WHEN** one feasible repair moves one existing event and another moves three of the same tier
 - **THEN** the one-event repair ranks ahead of the three-event repair
+
+#### Scenario: Preserve higher-priority events
+- **WHEN** one feasible weekly repair moves a Tier 1 event and another retains it by moving multiple Tier 4 events
+- **THEN** the repair moving Tier 4 events ranks ahead of the repair moving the Tier 1 event
+- **AND** higher-priority events may still move when required to find a feasible plan
 
 ### Requirement: Report search outcomes honestly
 The system SHALL bound search for the small hackathon dataset and report `feasible`, `partial`, or `no_solution_found`. Partial results SHALL identify unscheduled events and blocking constraints. A bounded search that finds no complete plan SHALL NOT claim proof of infeasibility or global optimality.
