@@ -74,3 +74,34 @@
 - [x] 9.2 Run up to four departments concurrently against an immutable round snapshot and merge placements before validation.
 - [x] 9.3 Route actionable shared conflicts to affected movable-event owners and skip unrelated revisions.
 - [x] 9.4 Verify concurrency, round isolation, merging, targeted revisions, cancellation, and a timed live feasible result.
+
+## 10. Training document imports
+
+- [x] 10.1 Persist original PDF bytes and metadata separately from planning snapshots, with original-file access and interrupted-analysis recovery.
+- [x] 10.2 Analyze PDFs through one structured, source-cited AI request, treating source text as untrusted data and leaving unknown policy values for review.
+- [x] 10.3 Add the document library, import progress, editable persisted suggestion drafts, and explicit validated creation of requirements/templates.
+- [x] 10.4 Preserve source-page references and descriptions through templates, requirements, and template-based events.
+- [x] 10.5 Manually verify the sample PDF, draft edits, record creation, original-byte retention, no automatic planning changes, and restart persistence.
+
+## 11. Document constraint suggestions
+
+- [x] 11.1 Extract source-cited, unconfirmed typed constraint drafts alongside training requirements/templates, preserving unsupported conditions as unenforced notes.
+- [x] 11.2 Provide editable rule review and explicit validated creation, preserving source references and existing template attachment workflows.
+- [x] 11.3 Manually verify extraction, draft persistence, confirmation, note behavior, deterministic enforcement after attachment, and builds.
+
+## 12. Delete import suggestions
+
+- [x] 12.1 Add persistent suggestion deletion with Undo in Review & edit, retaining originals and protecting already-created planning records.
+- [x] 12.2 Manually verify delete/Undo, refresh persistence, empty review state, and builds.
+
+## 13. CIM citation review fixes
+
+- [x] 13.1 Match ordered literal ellipsis segments across adjacent PDF pages, preserving review status for genuinely paraphrased excerpts.
+- [x] 13.2 Add local citation rechecking, editable source citations, advisory wording, and clear stale citation notices after correction.
+- [x] 13.3 Reproduce the saved CIM warnings, verify the correction flow, and repair the affected saved citations with a backup.
+
+## 14. Compound constraint descriptions
+
+- [x] 14.1 Return independent short-name rule drafts with separate guidance, event/template context, and conservative qualification mapping.
+- [x] 14.2 Review and confirm individual drafts without losing other roles from the description.
+- [x] 14.3 Verify the reported phrase, mapping safeguards, incompatibility regression, and browser confirmation flow.

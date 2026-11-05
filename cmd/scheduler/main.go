@@ -52,6 +52,9 @@ func main() {
 		fmt.Println("Demo restored. Local planning data was replaced.")
 		return
 	}
+	if err = db.RecoverDocumentAnalyses(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 	a := &app{db: db, ai: agents.New(os.Getenv("OPENAI_API_KEY"), env("OPENAI_MODEL", "gpt-5-mini")), loc: loc}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/context", a.context)
@@ -63,6 +66,15 @@ func main() {
 	mux.HandleFunc("POST /api/runs/{id}/apply", a.apply)
 	mux.HandleFunc("POST /api/constraints/interpret", a.interpret)
 	mux.HandleFunc("POST /api/events/{id}/complete", a.complete)
+	mux.HandleFunc("GET /api/documents", a.listDocuments)
+	mux.HandleFunc("POST /api/documents", a.importDocument)
+	mux.HandleFunc("GET /api/documents/{id}", a.getDocument)
+	mux.HandleFunc("GET /api/documents/{id}/file", a.documentFile)
+	mux.HandleFunc("POST /api/documents/{id}/analyze", a.startDocumentAnalysis)
+	mux.HandleFunc("POST /api/documents/{id}/citations/check", a.checkDocumentCitations)
+	mux.HandleFunc("PUT /api/documents/{id}/suggestions/{suggestion}", a.reviewSuggestion)
+	mux.HandleFunc("DELETE /api/documents/{id}/suggestions/{suggestion}", a.reviewSuggestion)
+	mux.HandleFunc("POST /api/documents/{id}/suggestions/{suggestion}/create", a.reviewSuggestion)
 	files := http.FileServer(http.Dir("web/dist"))
 	mux.Handle("/", files)
 	srv := &http.Server{Addr: "127.0.0.1:" + env("PORT", "8080"), Handler: mux, ReadHeaderTimeout: 5 * time.Second}
@@ -435,7 +447,8 @@ func (a *app) interpret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Text string `json:"text"`
+		Text  string         `json:"text"`
+		Event *planner.Event `json:"event"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -449,12 +462,12 @@ func (a *app) interpret(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, err)
 		return
 	}
-	rule, err := a.ai.Constraint(r.Context(), d, req.Text)
+	drafts, err := a.ai.Constraints(r.Context(), d, req.Text, req.Event)
 	if err != nil {
 		fail(w, 502, err)
 		return
 	}
-	respond(w, 200, rule)
+	respond(w, 200, drafts)
 }
 func (a *app) complete(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()

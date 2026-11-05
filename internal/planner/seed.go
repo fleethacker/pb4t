@@ -55,8 +55,10 @@ func Seed(loc *time.Location) Data {
 		d.Templates = append(d.Templates, EventTemplate{ID: "template-" + e.Type, Name: e.Name, DepartmentID: e.DepartmentID, Contact: e.Contact, Type: e.Type, Tags: e.Tags, Duration: e.Duration, ConstraintIDs: e.ConstraintIDs, Fatigue: e.Fatigue})
 	}
 	d.Requirements = []Requirement{
-		{"req-dc", "Damage control periodicity", "dc", "damage-control", at(0, 0), at(5, 0), 2, "Illustrative demo requirement — not official SFTRM policy", 7},
-		{"req-eng", "Engineering casualty training", "engineering", "engineering-casualty", at(0, 0), at(5, 0), 1, "Illustrative demo requirement", 7},
-		{"req-combat", "Combat systems readiness", "combat", "combat-exercise", at(0, 0), at(5, 0), 1, "Illustrative demo requirement", 7}}
+		{ID: "req-dc", Name: "Damage control periodicity", DepartmentID: "dc", Type: "damage-control", Start: at(0, 0), End: at(5, 0), Count: 2, Source: "Illustrative demo requirement — not official SFTRM policy", RepeatDays: 7},
+		{ID: "req-eng", Name: "Engineering casualty training", DepartmentID: "engineering", Type: "engineering-casualty", Start: at(0, 0), End: at(5, 0), Count: 1, Source: "Illustrative demo requirement", RepeatDays: 7},
+		{ID: "req-combat", Name: "Combat systems readiness", DepartmentID: "combat", Type: "combat-exercise", Start: at(0, 0), End: at(5, 0), Count: 1, Source: "Illustrative demo requirement", RepeatDays: 7},
+	}
+
 	return d
 }

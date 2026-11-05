@@ -46,12 +46,14 @@ Optional settings in `.env` or environment variables:
 
 Proposals are saved and can be reopened from **Saved proposals** after refresh. **Cancel proposal** leaves the calendar unchanged. If planning inputs change while a proposal is under review, generate a fresh proposal before applying.
 
+**Describe a constraint** can return several independent drafts. For example, “needs a EOOW and a observer” produces separate one-person qualification drafts. The event/template being edited supplies the attachment context. Review, edit, and **Confirm & attach** each draft independently. Explanations appear separately from short rule names. Unknown qualification names stay unmapped for review; “observer” is not assumed to mean “Drill Evaluator.” Choose an existing qualification or create the intended qualification under Planning inputs.
+
 ## Implementation
 
 - `cmd/scheduler`: local HTTP server and API
 - `internal/planner`: typed domain data, joint staffing evaluation, training coverage, bounded scheduling search
 - `internal/store`: SQLite entities, relationship tables, transactional writes, saved proposal snapshots
-- `internal/agents`: server-side Responses API tool loop and departmental proposal rounds
+- `internal/agents`: server-side structured Responses API submissions, constraint drafts, and departmental proposal rounds
 - `web/src`: React/TypeScript calendar, event editor, planning forms, and proposal review
 - `scripts/start.mjs`: one-command bootstrap and demo reset
 
@@ -70,3 +72,19 @@ npm start 2>&1 | tee /tmp/pb4t.log
 Stop with Ctrl+C and restart to load code changes. Resolution logs include `resolution run=...`, `department trace=run/department/round`, `openai trace=...`, and `solver run=...`. They report elapsed durations, HTTP status/request IDs, token counts, and tool names. Keys, prompts, tool arguments, tool results, and planning payloads are not logged. A long OpenAI request is visible immediately through its `phase=request` line and gets a duration when it completes. Frequent browser status checks are not logged.
 
 Live week generation supplies context upfront and makes one structured proposal request per department per round, with up to four departments running concurrently. The coordinator merges and validates a complete round before requesting revisions from affected departments. With the four demo departments this uses four initial requests and at most four revision requests. The engine remains responsible for final hard-constraint validation.
+
+## Import training documents
+
+Open **Training documents → Import PDF**. The original PDF (up to 20 MB) is retained in the same local SQLite database and can be reopened from the library. With an OpenAI key configured, the app proposes training requirements, event templates, and constraints with source pages, excerpts, recommendation/requirement labels, and missing-detail notes. Analysis sends the PDF to the configured OpenAI service; no local PDF converter is required.
+
+Review and edit each draft, supply missing department/duration/count/window information, and explicitly select **Create event template** or **Create training requirement**. Nothing is added to planning inputs or the calendar automatically. Recommended courses are advisory; the application does not infer training periodicities or certify compliance. Accepted records retain source links and can be edited under Planning inputs. Template-based events carry their source reference forward.
+
+Use **Delete suggestion** inside **Review & edit** to remove an unwanted draft; **Undo** restores the saved draft. Deleted suggestions stay hidden after refresh/restart. The original PDF is retained. Already-created items are managed through Planning inputs.
+
+Original PDFs remain available without a key and when analysis fails. Restart-interrupted analysis is marked retryable. Document records are retained when resetting the synthetic planning dataset; the original file lives in SQLite rather than a separate uploads directory.
+
+Constraint suggestions use the existing personnel, asset, time-window, incompatibility, and rest rule types. Review the fields and scope, confirm the rule, then select **Create constraint**. Attached-event rules are available to select on templates/events after creation; they are not automatically attached. Account access, prerequisite knowledge/completion, and other unsupported conditions can be saved as **unenforced notes**. They never become active scheduling rules. Created constraints retain their original source-page link. To obtain constraint suggestions for an older analyzed import, import another copy; saved drafts and accepted records are not overwritten.
+
+Only the uploaded PDF supplies source evidence; other imports and template defaults are excluded from extraction context. A bundled Go PDF reader matches literal excerpts to physical pages when text is extractable, including cover/advisory pages. Unmatched excerpts are clearly marked for review. This checks quotations and page locations, not whether the AI interpretation or source policy is correct/current. Doctrine-specific conditional triggers and procedural response timers remain subject to review rather than becoming invented calendar policies.
+
+**Recheck citations** updates source checks locally without another AI request. Literal quotations shortened with ellipses can span adjacent PDF pages. If the AI paraphrased a quotation, use **Review & edit → Source citation** to correct its wording/page from the original; saving checks it again and clears resolved notices.

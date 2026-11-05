@@ -25,6 +25,7 @@ Weekly PB4T planning must reconcile departmental drills with ship operations, sc
 - `schedule-resolution`: Generate feasible weekly plans and repair conflicts using explicit priorities and reviewable proposals.
 - `department-agents`: Coordinate departmental agents through backend tools and retain an understandable negotiation summary.
 - `training-readiness`: Track configured training obligations, completion history, and projected coverage from the weekly plan.
+- `training-document-import`: Retain original training PDFs and review source-cited suggestions before creating training requirements, event templates, or constraints.
 - `local-runtime`: Start the application locally with one command, automatic first-run setup, persistent data, and optional live AI configuration.
 
 ### Modified Capabilities

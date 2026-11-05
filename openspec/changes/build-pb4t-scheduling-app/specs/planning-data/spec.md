@@ -41,6 +41,24 @@ The system SHALL allow the planner to enter a free-form constraint and receive a
 - **WHEN** the system cannot map a submitted constraint to a supported type
 - **THEN** it identifies the text as unenforced and asks for a supported replacement or removal before full validation
 
+#### Scenario: Interpret multiple personnel roles in an event editor
+- **WHEN** the planner enters “needs a EOOW and a observer” while editing an event or template
+- **THEN** the interpreter returns two independent unconfirmed qualification drafts, each requesting one person
+- **AND** the event being edited supplies the attachment context, including an unsaved event/template
+- **AND** names remain short and clarification guidance is displayed separately
+- **AND** the planner can edit, confirm, attach, or cancel each draft independently
+
+#### Scenario: Preserve an unmapped role without substituting another
+- **WHEN** the catalog contains EOOW and Drill Evaluator but no Observer qualification
+- **THEN** the EOOW draft maps to EOOW and the observer draft retains an empty qualification mapping for review
+- **AND** observer is not silently mapped to Drill Evaluator
+- **AND** missing mapping in one draft does not discard the other valid draft
+
+#### Scenario: Distinguish attachment context from an incompatibility target
+- **WHEN** a rule requests personnel for the current event
+- **THEN** it does not require target_event_id or target_tag
+- **AND** those fields identify the prohibited other event/family only for incompatibility rules
+
 ### Requirement: Synthetic demonstration data
 The application SHALL provide a repeatable synthetic dataset containing multiple departments, overlapping qualifications, duty commitments, shared assets, fixed operating events, movable drills, configured rest policies, and illustrative training obligations. Illustrative policy values SHALL be labeled as demo values.
 

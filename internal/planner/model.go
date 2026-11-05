@@ -42,73 +42,79 @@ type Asset struct {
 	Availability []Window `json:"availability"`
 }
 type Rule struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Type            string    `json:"type"`
-	Scope           string    `json:"scope"`
-	Confirmed       bool      `json:"confirmed"`
-	QualificationID string    `json:"qualification_id,omitempty"`
-	PersonID        string    `json:"person_id,omitempty"`
-	AssetID         string    `json:"asset_id,omitempty"`
-	Count           int       `json:"count,omitempty"`
-	Start           time.Time `json:"start,omitempty"`
-	End             time.Time `json:"end,omitempty"`
-	TargetTag       string    `json:"target_tag,omitempty"`
-	TargetEventID   string    `json:"target_event_id,omitempty"`
-	Minutes         int       `json:"minutes,omitempty"`
+	SourceRef       *SourceReference `json:"source_ref,omitempty"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Type            string           `json:"type"`
+	Scope           string           `json:"scope"`
+	Confirmed       bool             `json:"confirmed"`
+	QualificationID string           `json:"qualification_id,omitempty"`
+	PersonID        string           `json:"person_id,omitempty"`
+	AssetID         string           `json:"asset_id,omitempty"`
+	Count           int              `json:"count,omitempty"`
+	Start           time.Time        `json:"start,omitempty"`
+	End             time.Time        `json:"end,omitempty"`
+	TargetTag       string           `json:"target_tag,omitempty"`
+	TargetEventID   string           `json:"target_event_id,omitempty"`
+	Minutes         int              `json:"minutes,omitempty"`
 }
 
 // EventTemplate contains reusable defaults, independent of any calendar date.
 type EventTemplate struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	DepartmentID  string   `json:"department_id"`
-	Contact       string   `json:"contact"`
-	Type          string   `json:"type"`
-	Tags          []string `json:"tags"`
-	Duration      int      `json:"duration"`
-	ConstraintIDs []string `json:"constraint_ids"`
-	Fatigue       bool     `json:"fatigue"`
+	SourceRef     *SourceReference `json:"source_ref,omitempty"`
+	Description   string           `json:"description,omitempty"`
+	ID            string           `json:"id"`
+	Name          string           `json:"name"`
+	DepartmentID  string           `json:"department_id"`
+	Contact       string           `json:"contact"`
+	Type          string           `json:"type"`
+	Tags          []string         `json:"tags"`
+	Duration      int              `json:"duration"`
+	ConstraintIDs []string         `json:"constraint_ids"`
+	Fatigue       bool             `json:"fatigue"`
 }
 
 func (t EventTemplate) Occurrence(start, windowStart, windowEnd time.Time) Event {
-	return Event{ID: ID(), TemplateID: t.ID, Name: t.Name, DepartmentID: t.DepartmentID,
+	return Event{ID: ID(), TemplateID: t.ID, SourceRef: t.SourceRef, Description: t.Description, Name: t.Name, DepartmentID: t.DepartmentID,
 		Contact: t.Contact, Type: t.Type, Tags: append([]string{}, t.Tags...), Duration: t.Duration,
 		ConstraintIDs: append([]string{}, t.ConstraintIDs...), Fatigue: t.Fatigue,
 		Start: start, RequestedStart: start, WindowStart: windowStart, WindowEnd: windowEnd, Status: "draft"}
 }
 
 type Event struct {
-	ID             string    `json:"id"`
-	TemplateID     string    `json:"template_id,omitempty"`
-	Name           string    `json:"name"`
-	DepartmentID   string    `json:"department_id"`
-	Contact        string    `json:"contact"`
-	Type           string    `json:"type"`
-	Tags           []string  `json:"tags"`
-	Start          time.Time `json:"start"`
-	RequestedStart time.Time `json:"requested_start"`
-	Duration       int       `json:"duration"`
-	WindowStart    time.Time `json:"window_start"`
-	WindowEnd      time.Time `json:"window_end"`
-	Fixed          bool      `json:"fixed"`
-	Status         string    `json:"status"`
-	ConstraintIDs  []string  `json:"constraint_ids"`
-	Fatigue        bool      `json:"fatigue"`
+	SourceRef      *SourceReference `json:"source_ref,omitempty"`
+	Description    string           `json:"description,omitempty"`
+	ID             string           `json:"id"`
+	TemplateID     string           `json:"template_id,omitempty"`
+	Name           string           `json:"name"`
+	DepartmentID   string           `json:"department_id"`
+	Contact        string           `json:"contact"`
+	Type           string           `json:"type"`
+	Tags           []string         `json:"tags"`
+	Start          time.Time        `json:"start"`
+	RequestedStart time.Time        `json:"requested_start"`
+	Duration       int              `json:"duration"`
+	WindowStart    time.Time        `json:"window_start"`
+	WindowEnd      time.Time        `json:"window_end"`
+	Fixed          bool             `json:"fixed"`
+	Status         string           `json:"status"`
+	ConstraintIDs  []string         `json:"constraint_ids"`
+	Fatigue        bool             `json:"fatigue"`
 }
 
 func (e Event) End() time.Time { return e.Start.Add(time.Duration(e.Duration) * time.Minute) }
 
 type Requirement struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	DepartmentID string    `json:"department_id"`
-	Type         string    `json:"type"`
-	Start        time.Time `json:"start"`
-	End          time.Time `json:"end"`
-	Count        int       `json:"count"`
-	Source       string    `json:"source"`
-	RepeatDays   int       `json:"repeat_days"`
+	SourceRef    *SourceReference `json:"source_ref,omitempty"`
+	ID           string           `json:"id"`
+	Name         string           `json:"name"`
+	DepartmentID string           `json:"department_id"`
+	Type         string           `json:"type"`
+	Start        time.Time        `json:"start"`
+	End          time.Time        `json:"end"`
+	Count        int              `json:"count"`
+	Source       string           `json:"source"`
+	RepeatDays   int              `json:"repeat_days"`
 }
 type Completion struct {
 	ID           string    `json:"id"`

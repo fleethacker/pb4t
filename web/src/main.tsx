@@ -22,6 +22,7 @@ import {
   GripVertical,
   CheckCheck,
   Database,
+  FileText,
 } from "lucide-react";
 import type {
   Context,
@@ -29,22 +30,16 @@ import type {
   Event,
   EventTemplate,
   Rule,
+  ConstraintDraft,
   Evaluation,
   Proposal,
   Window,
 } from "./types";
 import "./style.css";
+import { api } from "./api";
+import { Documents, SourceLink } from "./Documents";
+import { RuleFields } from "./RuleFields";
 
-async function api<T>(url: string, method = "GET", body?: unknown): Promise<T> {
-  const r = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const value = await r.json();
-  if (!r.ok) throw new Error(value.error || "Request failed");
-  return value;
-}
 const uid = () => crypto.randomUUID();
 let zone = "America/New_York";
 function localInput(value: string) {
@@ -132,6 +127,8 @@ function templateDefaults(e: EventTemplate): EventTemplate {
     tags: [...e.tags],
     constraint_ids: [...e.constraint_ids],
     fatigue: e.fatigue,
+    source_ref: e.source_ref,
+    description: e.description,
   };
 }
 function occurrence(t: EventTemplate, data: Data, week: string): Event {
@@ -324,6 +321,7 @@ function App() {
             ["calendar", "Weekly calendar", CalendarDays],
             ["training", "Training readiness", ShieldCheck],
             ["data", "Planning inputs", Layers],
+            ["documents", "Training documents", FileText],
           ].map(([id, label, Icon]) => (
             <button
               key={id as string}
@@ -400,14 +398,18 @@ function App() {
                   ? "Your week, coordinated."
                   : page === "training"
                     ? "Readiness starts here."
-                    : "A shared planning foundation."}
+                    : page === "documents"
+                      ? "Training, from the source."
+                      : "A shared planning foundation."}
               </h1>
               <p>
                 {page === "calendar"
                   ? "Bring every department into one clear, workable plan."
                   : page === "training"
                     ? "Track what’s complete, what’s planned, and what still needs a place."
-                    : "The people, resources, and rules behind a feasible schedule."}
+                    : page === "documents"
+                      ? "Import reference documents and review suggested training and constraints."
+                      : "The people, resources, and rules behind a feasible schedule."}
               </p>
             </div>
             {page === "calendar" && (
@@ -918,6 +920,15 @@ function App() {
                 ))}
               </div>
             </section>
+          ) : page === "documents" ? (
+            <Documents
+              data={data}
+              week={day}
+              toISO={iso}
+              toLocal={localInput}
+              ai={ctx.ai_available}
+              onCreated={load}
+            />
           ) : (
             <PlanningData
               data={data}
@@ -1330,7 +1341,7 @@ function EventEditor({
     [ev, setEv] = useState<Evaluation | null>(null),
     [error, setError] = useState(""),
     [working, setWorking] = useState(false),
-    [newRule, setNewRule] = useState<Rule | null>(null),
+    [newRules, setNewRules] = useState<ConstraintDraft[]>([]),
     [text, setText] = useState(""),
     [rules, setRules] = useState(data.constraints);
   const change = (key: keyof Event, value: unknown) => {
@@ -1394,16 +1405,19 @@ function EventEditor({
       setWorking(false);
     }
   }
-  async function saveRule() {
-    if (!newRule) return;
+  async function saveRule(draft: ConstraintDraft) {
     setWorking(true);
     setError("");
     try {
-      const r = { ...newRule, confirmed: newRule.type !== "note" };
+      const r = { ...draft.rule, confirmed: draft.rule.type !== "note" };
       await api("/api/data/constraints/" + r.id, "PUT", r);
-      setRules([...rules.filter((x) => x.id !== r.id), r]);
-      change("constraint_ids", [...e.constraint_ids, r.id]);
-      setNewRule(null);
+      setRules((current) => [...current.filter((x) => x.id !== r.id), r]);
+      setE((current) => ({
+        ...current,
+        constraint_ids: [...new Set([...current.constraint_ids, r.id])],
+      }));
+      setEv(null);
+      setNewRules((current) => current.filter((x) => x.rule.id !== r.id));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -1440,6 +1454,7 @@ function EventEditor({
         </div>
         <div className="editor-content">
           {error && <div className="notice error">{error}</div>}
+          {e.source_ref && <SourceLink source={e.source_ref} />}
           <label>
             {template ? "Template name" : "Event name"}
             <input
@@ -1512,6 +1527,13 @@ function EventEditor({
                 ? "Reusable event defaults"
                 : "Event details and overrides"}
             </summary>
+            <label>
+              Description
+              <textarea
+                value={e.description || ""}
+                onChange={(x) => change("description", x.currentTarget.value)}
+              />
+            </label>
             <div className="form-row">
               <label>
                 Department
@@ -1648,15 +1670,21 @@ function EventEditor({
                 <button
                   className="button"
                   onClick={() =>
-                    setNewRule({
-                      id: uid(),
-                      name: "",
-                      type: "qualification",
-                      scope: "event",
-                      confirmed: true,
-                      count: 1,
-                      qualification_id: data.qualifications[0]?.id,
-                    })
+                    setNewRules([
+                      {
+                        rule: {
+                          id: uid(),
+                          name: "",
+                          type: "qualification",
+                          scope: "event",
+                          confirmed: true,
+                          count: 1,
+                          qualification_id: data.qualifications[0]?.id,
+                        },
+                        requested_qualification: "",
+                        explanation: "",
+                      },
+                    ])
                   }
                 >
                   <Plus size={14} /> Create new
@@ -1690,12 +1718,21 @@ function EventEditor({
                 disabled={!ai || !text || working}
                 onClick={async () => {
                   setWorking(true);
+                  setError("");
                   try {
-                    setNewRule(
-                      await api<Rule>("/api/constraints/interpret", "POST", {
+                    const drafts = await api<ConstraintDraft[]>(
+                      "/api/constraints/interpret",
+                      "POST",
+                      {
                         text,
-                      }),
+                        event: e,
+                      },
                     );
+                    if (!Array.isArray(drafts))
+                      throw new Error(
+                        "Restart the app to load the updated constraint interpreter.",
+                      );
+                    setNewRules(drafts);
                   } catch (err) {
                     setError((err as Error).message);
                   } finally {
@@ -1706,28 +1743,50 @@ function EventEditor({
                 Interpret for review <ArrowRight size={13} />
               </button>
             </div>
-            {newRule && (
-              <div className="rule-draft">
+            {newRules.map((draft) => (
+              <div className="rule-draft" key={draft.rule.id}>
                 <h3>Review structured constraint</h3>
                 <p>
                   Confirm this interpretation before attaching it. Notes remain
                   unenforced.
                 </p>
-                <RuleFields rule={newRule} setRule={setNewRule} data={data} />
+                {draft.explanation && (
+                  <p className="notice">{draft.explanation}</p>
+                )}
+                <RuleFields
+                  rule={draft.rule}
+                  setRule={(rule) =>
+                    setNewRules((current) =>
+                      current.map((x) =>
+                        x.rule.id === draft.rule.id ? { ...x, rule } : x,
+                      ),
+                    )
+                  }
+                  data={data}
+                  toLocal={localInput}
+                  toISO={iso}
+                />
                 <div className="form-row">
                   <button
                     className="button primary"
                     disabled={working}
-                    onClick={saveRule}
+                    onClick={() => saveRule(draft)}
                   >
                     Confirm & attach
                   </button>
-                  <button className="button" onClick={() => setNewRule(null)}>
+                  <button
+                    className="button"
+                    onClick={() =>
+                      setNewRules((current) =>
+                        current.filter((x) => x.rule.id !== draft.rule.id),
+                      )
+                    }
+                  >
                     Cancel
                   </button>
                 </div>
               </div>
-            )}
+            ))}
           </details>
           {ev && (
             <div className="validation-result">
@@ -1833,184 +1892,6 @@ function EventEditor({
         </div>
       </section>
     </div>
-  );
-}
-function RuleFields({
-  rule: r,
-  setRule,
-  data,
-}: {
-  rule: Rule;
-  setRule: (r: Rule) => void;
-  data: Data;
-}) {
-  const set = (k: string, v: unknown) => setRule({ ...r, [k]: v });
-  return (
-    <>
-      <label>
-        Constraint name
-        <input
-          value={r.name}
-          onChange={(x) => set("name", x.currentTarget.value)}
-        />
-      </label>
-      <div className="form-row">
-        <label>
-          Rule type
-          <select
-            value={r.type}
-            onChange={(x) => set("type", x.currentTarget.value)}
-          >
-            {[
-              ["qualification", "Qualified personnel"],
-              ["person", "Named participant"],
-              ["asset", "Asset demand"],
-              ["allowed", "Allowed window"],
-              ["excluded", "Excluded window"],
-              ["incompatibility", "Cannot overlap"],
-              ["rest", "Minimum rest"],
-              ["note", "Unenforced note"],
-            ].map(([id, name]) => (
-              <option value={id} key={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Scope
-          <select
-            value={r.scope}
-            onChange={(x) => set("scope", x.currentTarget.value)}
-          >
-            <option value="event">Attached events</option>
-            <option value="global">Entire plan</option>
-          </select>
-        </label>
-      </div>
-      {r.type === "qualification" && (
-        <label>
-          Qualification
-          <select
-            value={r.qualification_id || ""}
-            onChange={(x) => set("qualification_id", x.currentTarget.value)}
-          >
-            <option value="">Select qualification</option>
-            {data.qualifications.map((q) => (
-              <option value={q.id} key={q.id}>
-                {q.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {r.type === "person" && (
-        <label>
-          Required person
-          <select
-            value={r.person_id || ""}
-            onChange={(x) => set("person_id", x.currentTarget.value)}
-          >
-            <option value="">Select person</option>
-            {data.people.map((p) => (
-              <option value={p.id} key={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {r.type === "asset" && (
-        <label>
-          Asset
-          <select
-            value={r.asset_id || ""}
-            onChange={(x) => set("asset_id", x.currentTarget.value)}
-          >
-            <option value="">Select asset</option>
-            {data.assets.map((a) => (
-              <option value={a.id} key={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {["asset", "qualification"].includes(r.type) && (
-        <label>
-          Required quantity
-          <input
-            type="number"
-            min={1}
-            value={r.count || 1}
-            onChange={(x) => set("count", Number(x.currentTarget.value))}
-          />
-        </label>
-      )}
-      {["allowed", "excluded"].includes(r.type) && (
-        <div className="form-row">
-          <label>
-            Window start
-            <input
-              type="datetime-local"
-              value={localInput(r.start || "")}
-              onInput={(x) => set("start", iso(x.currentTarget.value))}
-            />
-          </label>
-          <label>
-            Window end
-            <input
-              type="datetime-local"
-              value={localInput(r.end || "")}
-              onInput={(x) => set("end", iso(x.currentTarget.value))}
-            />
-          </label>
-        </div>
-      )}
-      {r.type === "incompatibility" && (
-        <>
-          <label>
-            Incompatible event tag
-            <input
-              value={r.target_tag || ""}
-              placeholder="e.g. flight"
-              onChange={(x) => set("target_tag", x.currentTarget.value)}
-            />
-          </label>
-          <label>
-            Or specific event
-            <select
-              value={r.target_event_id || ""}
-              onChange={(x) => set("target_event_id", x.currentTarget.value)}
-            >
-              <option value="">Any matching tag</option>
-              {data.events.map((e) => (
-                <option value={e.id} key={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
-      )}
-      {r.type === "rest" && (
-        <label>
-          Minimum rest (minutes)
-          <input
-            type="number"
-            min={0}
-            value={r.minutes || 0}
-            onChange={(x) => set("minutes", Number(x.currentTarget.value))}
-          />
-        </label>
-      )}
-      {r.type === "note" && (
-        <div className="notice error">
-          This note cannot be enforced. Remove or replace it before full
-          validation.
-        </div>
-      )}
-    </>
   );
 }
 
@@ -2187,6 +2068,7 @@ function PlanningData({
             </span>
             <div>
               <strong>{r.name || r.type}</strong>
+              {r.source_ref && <SourceLink source={r.source_ref} compact />}
               <small>
                 {r.department_id ? dep(data, r.department_id)?.name : ""}
                 {kind === "people"
@@ -2273,11 +2155,14 @@ function PlanningData({
               </button>
             </div>
             <div className="editor-content">
+              {record.source_ref && <SourceLink source={record.source_ref} />}
               {kind === "constraints" ? (
                 <RuleFields
                   rule={record as Rule}
                   setRule={setRecord}
                   data={data}
+                  toLocal={localInput}
+                  toISO={iso}
                 />
               ) : (
                 <>

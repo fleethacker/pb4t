@@ -5,7 +5,14 @@ export type Department = {
   color: string;
   goal: string;
 };
+export type SourceReference = {
+  document_id: string;
+  page: number;
+  excerpt: string;
+};
 export type Event = {
+  source_ref?: SourceReference;
+  description?: string;
   template_id?: string;
   id: string;
   name: string;
@@ -34,9 +41,12 @@ export type EventTemplate = Pick<
   | "duration"
   | "constraint_ids"
   | "fatigue"
+  | "source_ref"
+  | "description"
 >;
 
 export type Rule = {
+  source_ref?: SourceReference;
   id: string;
   name: string;
   type: string;
@@ -53,6 +63,11 @@ export type Rule = {
   minutes?: number;
 };
 export type Assignment = { event_id: string; person_id: string; role: string };
+export type ConstraintDraft = {
+  rule: Rule;
+  requested_qualification: string;
+  explanation: string;
+};
 export type Conflict = {
   type: string;
   rule_id?: string;
@@ -63,6 +78,7 @@ export type Conflict = {
   message: string;
 };
 export type Requirement = {
+  source_ref?: SourceReference;
   id: string;
   name: string;
   department_id: string;
@@ -159,4 +175,45 @@ export type Context = {
   ai_available: boolean;
   evaluation: Evaluation;
   runs: { id: string; status: string; mode: string; summary: string }[];
+};
+
+export type TrainingSuggestion = {
+  training_activity?: string;
+  duration_evidence?: string;
+  citation_status?: "matched" | "needs_review";
+  id: string;
+  kind: "template" | "requirement" | "constraint";
+  name: string;
+  description: string;
+  basis: "required" | "recommended";
+  department_id: string;
+  contact: string;
+  type: string;
+  duration: number;
+  tags: string[];
+  constraint_ids: string[];
+  fatigue: boolean;
+  count: number;
+  repeat_days: number;
+  start: string;
+  end: string;
+  page: number;
+  excerpt: string;
+  review_notes: string;
+  missing: string[];
+  rule?: Rule;
+  created_id?: string;
+  deleted?: boolean;
+};
+export type TrainingDocument = {
+  id: string;
+  filename: string;
+  size: number;
+  sha256: string;
+  imported_at: string;
+  status: string;
+  error?: string;
+  title: string;
+  summary: string;
+  suggestions: TrainingSuggestion[];
 };

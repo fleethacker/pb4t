@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"scheduler/internal/planner"
 	"slices"
+	"strings"
 	"time"
+
+	"scheduler/internal/planner"
 )
 
 type traceKey struct{}
@@ -59,9 +61,12 @@ type response struct {
 	} `json:"error"`
 }
 
-func (c *Client) request(ctx context.Context, trace string, step int, instructions string, tools []map[string]any, input []json.RawMessage, forcedTool string) (response, error) {
+func (c *Client) request(ctx context.Context, trace string, step int, instructions string, tools []map[string]any, input []json.RawMessage, forcedTool string, effort ...string) (response, error) {
 	var result response
 	payload := map[string]any{"model": c.Model, "instructions": instructions, "tools": tools, "input": input, "store": false, "parallel_tool_calls": false}
+	if len(effort) > 0 && strings.HasPrefix(c.Model, "gpt-5") {
+		payload["reasoning"] = map[string]string{"effort": effort[0]}
+	}
 	if forcedTool != "" {
 		payload["tool_choice"] = map[string]any{"type": "function", "name": forcedTool}
 	}
@@ -100,56 +105,6 @@ func (c *Client) request(ctx context.Context, trace string, step int, instructio
 	}
 	log.Printf("openai trace=%s step=%d input_tokens=%d output_tokens=%d reasoning_tokens=%d", trace, step, result.Usage.Input, result.Usage.Output, result.Usage.Details.Reasoning)
 	return result, nil
-}
-
-func (c *Client) run(ctx context.Context, instructions string, tools []map[string]any, dispatch func(string, json.RawMessage) (any, error)) error {
-	trace, _ := ctx.Value(traceKey{}).(string)
-	if trace == "" {
-		trace = "constraint-" + planner.ID()
-	}
-	input := []json.RawMessage{json.RawMessage(`{"role":"user","content":"Inspect shared planning data and submit your concrete result using the tools."}`)}
-	for step := 0; step < 8; step++ {
-		result, err := c.request(ctx, trace, step+1, instructions, tools, input, "")
-		if err != nil {
-			return err
-		}
-
-		called := false
-		for _, item := range result.Output {
-			input = append(input, item)
-			var call struct {
-				Type      string `json:"type"`
-				Name      string `json:"name"`
-				CallID    string `json:"call_id"`
-				Arguments string `json:"arguments"`
-			}
-			if err = json.Unmarshal(item, &call); err != nil {
-				return err
-			}
-			if call.Type != "function_call" {
-				continue
-			}
-			called = true
-			toolStarted := time.Now()
-			value, err := dispatch(call.Name, json.RawMessage(call.Arguments))
-			log.Printf("openai trace=%s step=%d tool=%s duration=%s failed=%t", trace, step+1, call.Name, time.Since(toolStarted).Round(time.Millisecond), err != nil)
-			if err != nil {
-				value = map[string]string{"error": err.Error()}
-			}
-			encoded, _ := json.Marshal(value)
-			feedback, _ := json.Marshal(map[string]any{"type": "function_call_output", "call_id": call.CallID, "output": string(encoded)})
-			input = append(input, feedback)
-			if call.Name == "submit_department_proposal" || call.Name == "suggest_constraint" {
-				if err == nil {
-					return nil
-				}
-			}
-		}
-		if !called {
-			return fmt.Errorf("agent did not submit a structured result")
-		}
-	}
-	return fmt.Errorf("agent reached its bounded tool-call limit")
 }
 
 // Department asks for exactly one proposal from the supplied round snapshot.
@@ -223,25 +178,6 @@ func (c *Client) Department(ctx context.Context, d planner.Data, w time.Time, de
 	return p, nil
 }
 
-func (c *Client) Constraint(ctx context.Context, d planner.Data, text string) (planner.Rule, error) {
-	var rule planner.Rule
-	properties := map[string]any{"name": str(), "type": map[string]any{"type": "string", "enum": []string{"qualification", "person", "asset", "allowed", "excluded", "incompatibility", "rest", "note"}}, "qualification_id": str(), "person_id": str(), "asset_id": str(), "count": map[string]any{"type": "integer"}, "start": map[string]any{"type": "string", "format": "date-time"}, "end": map[string]any{"type": "string", "format": "date-time"}, "target_tag": str(), "target_event_id": str(), "minutes": map[string]any{"type": "integer"}}
-	contextData, _ := json.Marshal(map[string]any{"qualifications": d.Qualifications, "people": d.People, "assets": d.Assets, "events": d.Events})
-	err := c.run(ctx, "Translate the user's constraint into one supported rule. Use actual supplied IDs. Unused strings must be empty; unused times can use 2000-01-01T00:00:00Z. If ambiguous or unsupported use type note and explain the missing interpretation in name. Never invent IDs or policies. For incompatibility, identify only the prohibited OTHER event, not the drill being edited. Prefer target_tag for families such as flight quarters (tag flight), and leave target_event_id empty whenever target_tag is set. Use a specific event ID only if the user explicitly identifies that event. This will require user confirmation. User text: "+text+". Available planning data: "+string(contextData), []map[string]any{tool("suggest_constraint", "Propose a structured constraint draft for user confirmation.", schema(properties))}, func(name string, args json.RawMessage) (any, error) {
-		if name != "suggest_constraint" {
-			return nil, fmt.Errorf("unknown tool")
-		}
-		if err := json.Unmarshal(args, &rule); err != nil {
-			return nil, err
-		}
-		if rule.Type == "incompatibility" && rule.TargetTag != "" {
-			// A family-wide restriction already covers its member events.
-			rule.TargetEventID = ""
-		}
-		rule.ID = planner.ID()
-		rule.Scope = "event"
-		rule.Confirmed = false
-		return rule, planner.ValidateRule(d, rule)
-	})
-	return rule, err
+func constraintProperties() map[string]any {
+	return map[string]any{"name": str(), "type": map[string]any{"type": "string", "enum": []string{"qualification", "person", "asset", "allowed", "excluded", "incompatibility", "rest", "note"}}, "qualification_id": str(), "person_id": str(), "asset_id": str(), "count": map[string]any{"type": "integer"}, "start": map[string]any{"type": "string", "format": "date-time"}, "end": map[string]any{"type": "string", "format": "date-time"}, "target_tag": str(), "target_event_id": str(), "minutes": map[string]any{"type": "integer"}}
 }

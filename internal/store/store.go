@@ -39,7 +39,8 @@ func Open(path string, loc *time.Location, reset bool) (*Store, error) {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS person_qualifications (person_id TEXT REFERENCES people(id) ON DELETE CASCADE, qualification_id TEXT REFERENCES qualifications(id), PRIMARY KEY(person_id,qualification_id));
  CREATE TABLE IF NOT EXISTS event_constraints (event_id TEXT REFERENCES events(id) ON DELETE CASCADE, constraint_id TEXT REFERENCES "constraints"(id), PRIMARY KEY(event_id,constraint_id));
  CREATE TABLE IF NOT EXISTS assignments (event_id TEXT REFERENCES events(id) ON DELETE CASCADE, person_id TEXT REFERENCES people(id), role TEXT NOT NULL, PRIMARY KEY(event_id,person_id));
- CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, payload TEXT NOT NULL);`)
+ CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS documents (id TEXT PRIMARY KEY, payload TEXT NOT NULL, original BLOB NOT NULL);`)
 	if err != nil {
 		return fail(err)
 	}
@@ -150,7 +151,15 @@ func insert[T any](ctx context.Context, tx *sql.Tx, table string, items []T) err
 	}
 	return nil
 }
-func (s *Store) Save(ctx context.Context, d planner.Data) error {
+func (s *Store) Save(ctx context.Context, d planner.Data) error { return s.save(ctx, d, nil) }
+
+// SaveDocumentReview atomically creates the accepted planning record and marks
+// its source suggestion as created, preventing duplicate acceptance on retry.
+func (s *Store) SaveDocumentReview(ctx context.Context, d planner.Data, doc planner.TrainingDocument) error {
+	return s.save(ctx, d, &doc)
+}
+
+func (s *Store) save(ctx context.Context, d planner.Data, doc *planner.TrainingDocument) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -189,6 +198,15 @@ func (s *Store) Save(ctx context.Context, d planner.Data) error {
 	}
 	for _, a := range d.Assignments {
 		if _, err = tx.ExecContext(ctx, `INSERT INTO assignments VALUES (?,?,?)`, a.EventID, a.PersonID, a.Role); err != nil {
+			return err
+		}
+	}
+	if doc != nil {
+		raw, err := json.Marshal(doc)
+		if err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, `UPDATE documents SET payload=? WHERE id=?`, string(raw), doc.ID); err != nil {
 			return err
 		}
 	}
