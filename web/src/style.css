@@ -499,6 +499,7 @@ main {
   color: #34533e;
 }
 .calendar-body {
+  position: relative;
   display: grid;
   grid-template-columns: 47px repeat(7, 1fr);
 }
@@ -518,6 +519,38 @@ main {
   border-left: 1px solid #e9ede3;
   background-image: linear-gradient(to bottom, #e9ede3 1px, transparent 1px);
   min-width: 0;
+}
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+  background: rgb(198 40 40 / 40%);
+  z-index: 3;
+  pointer-events: none;
+}
+.current-time-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c62828;
+}
+.current-time-line time {
+  position: absolute;
+  left: 5px;
+  bottom: 4px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #c62828;
+  color: white;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .calendar-event {
   position: absolute;

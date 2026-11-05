@@ -150,6 +150,18 @@ function occurrence(t: EventTemplate, data: Data, week: string): Event {
 }
 
 function App() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const updateNow = () => setNow(new Date());
+    const id = window.setInterval(updateNow, 15_000);
+    window.addEventListener("focus", updateNow);
+    document.addEventListener("visibilitychange", updateNow);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", updateNow);
+      document.removeEventListener("visibilitychange", updateNow);
+    };
+  }, []);
   const drag = useRef<{
     event: Event;
     x: number;
@@ -264,6 +276,12 @@ function App() {
   const data = ctx.data,
     day = dateOnly(ctx.week),
     dates = Array.from({ length: 7 }, (_, i) => addDays(day, i));
+  const localNow = localInput(now.toISOString()),
+    today = localNow.slice(0, 10),
+    currentMinutes =
+      Number(localNow.slice(11, 13)) * 60 +
+      Number(localNow.slice(14, 16)) +
+      now.getUTCSeconds() / 60;
   const events = data.events.filter(
     (e) => dateOnly(e.start) >= day && dateOnly(e.start) <= dates[6],
   );
@@ -678,7 +696,7 @@ function App() {
                         <div
                           className={
                             "day-header " +
-                            (d === dateOnly(new Date().toISOString())
+                            (d === today
                               ? "today"
                               : "")
                           }
@@ -947,6 +965,28 @@ function App() {
                           </div>
                         );
                       })}
+                      {dates.includes(today) &&
+                        currentMinutes >= startHour * 60 &&
+                        currentMinutes < endHour * 60 && (
+                          <div
+                            className="current-time-line"
+                            style={{
+                              top:
+                                ((currentMinutes - startHour * 60) / 60) *
+                                hourHeight,
+                            }}
+                          >
+                            <time
+                              dateTime={now.toISOString()}
+                              aria-label={`Current ship time: ${localNow.slice(11, 16)}`}
+                              style={{
+                                left: `calc(47px + (100% - 47px) / 7 * ${dates.indexOf(today)} + 5px)`,
+                              }}
+                            >
+                              {localNow.slice(11, 16)}
+                            </time>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </div>
