@@ -8,3 +8,5 @@ data/
 *.db-wal
 bin/
 .DS_Store
+mise.local.toml
+mise.*.local.toml

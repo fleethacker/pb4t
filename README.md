@@ -4,7 +4,28 @@ A local shipboard training calendar with personnel and asset conflict checks, ex
 
 ## Run locally
 
-Install **Go 1.24+** and **Node.js 22.12+ with npm**, then run from this directory:
+With [mise](https://mise.jdx.dev/getting-started.html) installed, run from this directory:
+
+```sh
+mise trust
+mise install
+mise run start
+```
+
+The project pins Go 1.26.6 and Node.js 24.21.0. The start task uses the existing bootstrap script, including optional local `.env` settings. No shell activation is needed when using `mise run`.
+
+| Command | Purpose |
+| --- | --- |
+| `mise run deps` | Install dependencies from the frontend lockfile and Go modules |
+| `mise run build` | Install dependencies and build React plus `bin/scheduler` |
+| `mise run check` | Build/typecheck the app and run Go vet |
+| `mise run reset-demo` | Replace local planning data with the demo dataset; stop the app first |
+| `mise run helm:lint` | Validate the Helm chart without deploying |
+| `mise run uds:lint` | Validate the UDS package without deploying |
+
+Helm 4.3.0 and UDS CLI 0.39.0 are installed only when their optional tasks are run. Use `mise tasks` to list available tasks. Machine-specific overrides can go in ignored `mise.local.toml` or `mise.<environment>.local.toml` files.
+
+Without mise, install **Go 1.24+** and **Node.js 22.12+ with npm**, then run from this directory:
 
 ```sh
 npm start

@@ -1,0 +1,36 @@
+[tools]
+go = "1.26.6"
+node = "24.21.0"
+
+[tasks.deps]
+description = "Install application dependencies"
+run = ["npm ci --prefix web", "go mod download"]
+
+[tasks.start]
+description = "Build and start the local planner"
+run = "npm start"
+raw = true
+
+[tasks.build]
+description = "Build the frontend and backend"
+depends = ["deps"]
+run = ["npm run build", "mkdir -p bin", "go build -o bin/scheduler ./cmd/scheduler"]
+
+[tasks.check]
+description = "Build the application and run Go vet"
+depends = ["build"]
+run = "go vet ./..."
+
+[tasks."reset-demo"]
+description = "Replace local planning data with the demo dataset"
+run = "npm run reset-demo"
+
+[tasks."helm:lint"]
+description = "Validate the Helm chart without deploying"
+tools = { helm = "4.3.0" }
+run = "helm lint deploy/helm/pb4t --strict"
+
+[tasks."uds:lint"]
+description = "Validate the UDS package without deploying"
+tools = { "aqua:defenseunicorns/uds-cli" = "0.39.0" }
+run = "uds zarf dev lint deploy/uds"
