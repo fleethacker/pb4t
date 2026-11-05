@@ -681,13 +681,15 @@ main {
   );
   z-index: 1;
 }
-.calendar-event.change-highlighted {
+.calendar-event.change-highlighted,
+.calendar-event.conflict-highlighted {
   outline: 2px solid var(--event-color);
   outline-offset: 2px;
   box-shadow: 0 3px 12px color-mix(in srgb, var(--event-color) 35%, transparent);
   z-index: 3;
 }
-.calendar-event.change-muted {
+.calendar-event.change-muted,
+.calendar-event.conflict-muted {
   opacity: 0.4;
 }
 .change.change-active,
@@ -909,6 +911,16 @@ main {
   border-radius: 5px;
   padding: 12px;
   margin-bottom: 9px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.conflict[tabindex]:hover,
+.conflict[tabindex]:focus-within {
+  background: #f8f0df;
+  border-color: #b38848;
+}
+.conflict[tabindex]:focus-visible {
+  outline: 2px solid #b38848;
+  outline-offset: -2px;
 }
 .conflict > div:first-child {
   display: flex;

@@ -219,7 +219,8 @@ function App() {
     [toast, setToast] = useState(""),
     [viewRun, setViewRun] = useState(false),
     [overlayHidden, setOverlayHidden] = useState(false),
-    [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
+    [highlightedEventId, setHighlightedEventId] = useState<string | null>(null),
+    [highlightedConflictEventIds, setHighlightedConflictEventIds] = useState<string[]>([]);
   const load = async () => {
     const c = await api<Context>(
       "/api/context" + (week ? "?week=" + week : ""),
@@ -312,6 +313,11 @@ function App() {
     )
       ? highlightedEventId
       : null;
+  const conflictHighlights = new Set(
+    highlightedConflictEventIds.filter((id) =>
+      entries.some(({ event }) => event.id === id),
+    ),
+  );
   const proposedConflicts = new Set(
     proposal?.evaluation?.conflicts?.flatMap((c) => c.event_ids) || [],
   );
@@ -872,6 +878,11 @@ function App() {
                                       ? e.id === activeHighlight
                                         ? " change-highlighted"
                                         : " change-muted"
+                                      : "") +
+                                    (conflictHighlights.size
+                                      ? conflictHighlights.has(e.id)
+                                        ? " conflict-highlighted"
+                                        : " conflict-muted"
                                       : "")
                                   }
                                   style={
@@ -1074,6 +1085,7 @@ function App() {
                       </p>
                       <ConflictList
                         evaluation={ctx.evaluation}
+                        onHighlight={setHighlightedConflictEventIds}
                         onEvent={(id) => {
                           const e = events.find((x) => x.id === id);
                           if (e) open(e);
@@ -1403,10 +1415,18 @@ function layout(events: Pick<Event, "id" | "start" | "duration">[]) {
 function ConflictList({
   evaluation,
   onEvent,
+  onHighlight,
 }: {
   evaluation: Evaluation;
   onEvent?: (id: string) => void;
+  onHighlight?: (ids: string[]) => void;
 }) {
+  const [hovered, setHovered] = useState<string[] | null>(null),
+    [focused, setFocused] = useState<string[] | null>(null);
+  useEffect(() => {
+    onHighlight?.(hovered || focused || []);
+    return () => onHighlight?.([]);
+  }, [hovered, focused, onHighlight]);
   return (
     <div className="conflict-list">
       {evaluation.conflicts.length === 0 ? (
@@ -1417,7 +1437,17 @@ function ConflictList({
         </div>
       ) : (
         evaluation.conflicts.map((c, i) => (
-          <div className="conflict" key={i}>
+          <div
+            className="conflict"
+            key={i}
+            tabIndex={onHighlight ? 0 : undefined}
+            onMouseEnter={() => setHovered(c.event_ids)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setFocused(c.event_ids)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setFocused(null);
+            }}
+          >
             <div>
               <span className="conflict-type">
                 {c.type.replaceAll("_", " ")}
