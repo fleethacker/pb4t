@@ -66,6 +66,13 @@ The application SHALL provide a repeatable synthetic dataset containing multiple
 - **WHEN** a planner loads the synthetic dataset
 - **THEN** the calendar includes an intentional personnel conflict, an asset conflict, and a resolvable training-coverage gap
 
+#### Scenario: Explore operational tag conflicts
+- **WHEN** a planner opens a newly seeded or explicitly reset demo
+- **THEN** reusable templates include radio use and restrictions, radar use and restrictions, and mess-deck use and restrictions inspired by the supplied CSV examples
+- **AND** attached typed constraints deterministically detect incompatible overlaps and shared asset demands
+- **AND** the expanded calendar can be resolved while preserving fixed operations and covering its illustrative training requirements
+- **AND** ordinary startup does not overwrite an existing database with the expanded seed
+
 ### Requirement: Independent template occurrences
 The system SHALL copy template defaults into each new occurrence and retain its source template ID. Subsequent template edits SHALL affect future occurrences without changing existing calendar events. Existing stored templates SHALL remain readable without resetting the database.
 

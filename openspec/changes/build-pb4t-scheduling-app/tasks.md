@@ -119,3 +119,13 @@
 ## 17. Streamlined workspace header
 
 - [x] 17.1 Remove the four top dashboard cards, their unused component/styles, and use the freed space for the calendar.
+
+## 18. Expanded sample planning data
+
+- [x] 18.1 Expand the synthetic roster, resources, constraints, templates, calendar, and illustrative requirements using the supplied CSV examples.
+- [x] 18.2 Verify CSV tag mappings, deterministic conflicts, complete generation, persistence, and template defaults without changing saved user data.
+
+## 19. Adaptive calendar card content
+
+- [x] 19.1 Prioritize event names and adapt secondary metadata to each card's rendered width and height, preserving accessible details and status indicators.
+- [x] 19.2 Verify short, narrow, roomy, fixed, draft, conflicting, and proposal cards in an isolated calendar.

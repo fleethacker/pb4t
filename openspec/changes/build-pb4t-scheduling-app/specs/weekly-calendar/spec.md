@@ -13,6 +13,13 @@ The application SHALL display saved events and timed drafts in a seven-day calen
 - **THEN** its main content follows the page heading without the four dashboard summary cards
 - **AND** detailed conflict, coverage, and proposal information remains available in its existing planning views
 
+#### Scenario: Read a short or crowded event card
+- **WHEN** an event card has limited rendered width or height
+- **THEN** its name appears before secondary metadata and retains the available text space
+- **AND** time, department, and textual status labels appear only when space permits
+- **AND** department colors and compact state indicators remain visible
+- **AND** the full name, timing, department, contact, state, and supplied description remain available in its accessible name and native hover tooltip
+
 ### Requirement: Event management with multiple constraints
 The application SHALL allow a planner to create, edit, and delete an event with a name, department, point of contact, drill type, duration, requested time, allowed scheduling window, fixed/movable setting, and zero or more constraint attachments. It SHALL allow selecting existing constraints or creating supported new constraints within the editor.
 

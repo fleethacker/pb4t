@@ -625,13 +625,36 @@ function App() {
                                 hasConflict =
                                   showingOverlay && entry.layer !== "current"
                                     ? proposedConflicts.has(e.id)
-                                    : conflicting.has(e.id);
+                                    : conflicting.has(e.id),
+                                isDraft =
+                                  e.status === "draft" &&
+                                  entry.layer !== "proposed";
                               const description = `${label ? label + ": " : ""}${e.name} · ${stamp(e.start)} · ${e.duration} min`;
+                              const details = [
+                                description,
+                                department?.name,
+                                e.contact && `Contact: ${e.contact}`,
+                                e.fixed && "Fixed commitment",
+                                hasConflict && "Constraint conflict",
+                                isDraft && "Draft",
+                                e.description,
+                              ]
+                                .filter(Boolean)
+                                .join("\n");
+                              const compactStatus = hasConflict ? (
+                                <AlertTriangle size={10} />
+                              ) : e.fixed ? (
+                                <LockKeyhole size={10} />
+                              ) : label ? (
+                                <Layers size={10} />
+                              ) : isDraft ? (
+                                <span className="event-draft-dot" />
+                              ) : null;
                               return (
                                 <button
                                   key={entry.key}
-                                  aria-label={description}
-                                  title={description}
+                                  aria-label={details}
+                                  title={details}
                                   draggable={false}
                                   onPointerDown={(ev) => {
                                     drag.current = null;
@@ -672,10 +695,7 @@ function App() {
                                   className={
                                     "calendar-event " +
                                     (e.fixed ? "fixed " : "") +
-                                    (e.status === "draft" &&
-                                    entry.layer !== "proposed"
-                                      ? "draft "
-                                      : "") +
+                                    (isDraft ? "draft " : "") +
                                     (hasConflict ? "conflicted " : "") +
                                     (entry.layer === "proposed"
                                       ? "proposed"
@@ -706,31 +726,41 @@ function App() {
                                     } as React.CSSProperties
                                   }
                                 >
-                                  <span className="event-time">
-                                    {e.fixed ? (
-                                      <LockKeyhole size={10} />
-                                    ) : !reviewingProposal ? (
-                                      <GripVertical size={10} />
-                                    ) : null}{" "}
-                                    {time(e.start)}{" "}
-                                    {hasConflict && <AlertTriangle size={10} />}
+                                  <span
+                                    className="event-content"
+                                    aria-hidden="true"
+                                  >
+                                    <strong className="event-name">
+                                      {e.name}
+                                    </strong>
+                                    <span className="event-meta">
+                                      <span className="event-time">
+                                        {time(e.start)}
+                                      </span>
+                                      <span className="event-indicators">
+                                        {e.fixed && <LockKeyhole size={10} />}
+                                        {hasConflict && <AlertTriangle size={10} />}
+                                        {label && <Layers size={10} />}
+                                        {isDraft && (
+                                          <span className="event-draft-dot" />
+                                        )}
+                                      </span>
+                                    </span>
+                                    <span className="event-dept">
+                                      {department?.name}
+                                    </span>
                                     {label && (
                                       <span className="event-position-label">
                                         {label}
                                       </span>
                                     )}
-                                  </span>
-                                  <strong>{e.name}</strong>
-                                  {e.duration >= 60 && (
-                                    <span className="event-dept">
-                                      {department?.name}
-                                    </span>
-                                  )}
-                                  {e.status === "draft" &&
-                                    entry.layer !== "proposed" &&
-                                    e.duration >= 60 && (
+                                    {isDraft && (
                                       <span className="draft-label">DRAFT</span>
                                     )}
+                                    <span className="event-compact-status">
+                                      {compactStatus}
+                                    </span>
+                                  </span>
                                 </button>
                               );
                             })}

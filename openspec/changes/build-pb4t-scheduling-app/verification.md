@@ -1,6 +1,6 @@
 # Implementation verification
 
-Date: 2026-11-04. Progress: 71/71 tasks complete. Implementation and manual verification, including linked proposal highlights and the streamlined workspace header, are complete.
+Date: 2026-11-04. Progress: 75/75 tasks complete. Implementation and manual verification, including adaptive calendar card content, are complete.
 
 ## Build and local operation
 
@@ -128,3 +128,18 @@ No automated test suite was added, per the requested hackathon scope. No branch,
 
 - Removed the four global summary cards and their unused component, calculation, and responsive styles. Detailed conflict, training, and proposal information remains in the existing planning views. Increased the calendar's available height to use the freed space.
 - Browser verification on the isolated preview confirmed zero summary cards, the calendar directly below the heading, and the existing proposal overlay with two linked highlighted placements on hover. Frontend TypeScript/production build passed. Screenshot: ignored `.cache/pb4t-streamlined-calendar.png`. Automated tests were skipped under the retained hackathon scope; the user's running app/database was unchanged.
+
+## Expanded CSV-inspired sample data
+
+- Expanded the seed to 20 calendar events, 19 reusable templates, 20 constraints, ten personnel with nine qualifications, six shared assets, and six illustrative training requirements. All twelve supplied CSV event names are represented; a radar tracking check exercises the otherwise unused needs-radars tag. Existing examples remain available. Descriptions identify the added scheduling/staffing values as editable demo assumptions, and added requirements explicitly identify their weekly frequencies as illustrative.
+- A local manual walkthrough parsed the supplied Events CSV and verified every nonempty tag ID against both the event tag and attached rule. Confirmed radio, radar, and mess-deck pairs produce incompatibility conflicts, separating each pair clears its conflicts, and unrelated overlapping activities remain valid. Domain validation passed for both seeded and persisted data.
+- Full seed evaluation found six incompatibility conflicts, one shared-simulator conflict, and one joint personnel conflict. Deterministic generation found a feasible 21-event proposal with nine changes, zero hard conflicts, no unscheduled events, and zero gaps across six requirements in 3.027 seconds. All fixed placements were retained, and generation left the seed unchanged.
+- A fresh temporary SQLite database retained the complete seed identically across close/reopen. Browser inspection showed all 20 events and 19 template choices. Choosing Aloft populated Ship Operations, Topside supervisor, 60 minutes, `aloft, no-radios`, and its No radios / Aloft supervisor / Observer constraints. Closing the editor did not save another event.
+- Go build/vet and strict OpenSpec validation passed. The walkthrough is retained under ignored `.cache/debug/check-expanded-seed.go`; no automated suite was added under the hackathon scope. The user's running app and saved data were unchanged; no commit or push was made. README documents a separate database/port for trying the expanded demo without resetting the existing calendar.
+
+## Adaptive calendar card content
+
+- Event names now precede metadata. CSS size queries adapt to actual rendered card width and height, hiding secondary time/department/state text when needed, while preserving department colors and compact state markers. Full details, including descriptions, are retained in native title tooltips and accessible button names. No event geometry or scheduling behavior changed.
+- Manually checked 15-, 30-, 45-, 60-, 90-, and 120-minute cards in an isolated 22-event preview. Narrow overlap cards omitted timestamps; the narrowest used a primary status glyph. The 15-minute card retained two title lines with no timestamp, and the 45-minute card retained two lines plus time without overflowing. A roomy 149-pixel-wide fixed card displayed its department. Checked a temporary 1800-pixel viewport to exercise wide-card behavior, then reset it to the normal viewport.
+- Native mouse click and keyboard Enter opened the short event's existing editor with the correct description and duration; closing left it unchanged. Proposal generation displayed 31 comparison cards with original/proposed markers, and keyboard focus on a proposed change still highlighted both placements. The complete planning dataset matched the saved baseline after all preview interactions and generation.
+- Frontend TypeScript/production build, formatting checks, and strict OpenSpec validation passed. Screenshot: ignored `.cache/pb4t-adaptive-cards.png`. Automated tests were skipped under the retained hackathon scope. Only the isolated preview on port 8086 was used; existing user calendars were not restarted or changed. No commit or push was made.

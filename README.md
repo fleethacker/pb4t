@@ -14,7 +14,17 @@ Open **http://localhost:8080** when the ready message appears. The command insta
 
 Data lives in `./data/scheduler.db` and survives restarts. The included policies and personnel are illustrative, not verified SFTRM mandates.
 
-To intentionally replace local planning data with the original synthetic dataset, stop the app and run:
+The expanded demo contains 20 calendar events, 19 reusable templates, 20 constraints, 10 personnel, six shared assets, and six illustrative training requirements. The supplied Events and Constraints CSVs inspired flight operations, aloft work, HF radio events, CSTT training, DC fire, steering loss, diving, communications checks, EMCON, mass casualty, chow, and ammo movement. A radar tracking check demonstrates the opposing radar tags. Added durations, staffing, resources, and weekly training frequencies are editable demo assumptions.
+
+The CSV tag IDs map to readable tags: `0001` → `no-radios`, `0002` → `needs-radios`, `0003` → `no-radars`, `0004` → `needs-radars`, `0005` → `no-mess-decks`, and `0006` → `needs-mess-decks`. Restriction rules prohibit overlap with the corresponding needs tag; needs rules reserve the relevant asset. The initial week deliberately includes these conflicts for deterministic resolution.
+
+Existing databases retain their saved data when the demo changes. To try the expanded sample alongside your current app, run this command and open **http://localhost:8085**:
+
+```sh
+PORT=8085 DATABASE_PATH=./data/expanded-demo.db npm start
+```
+
+To intentionally replace local planning data with the updated synthetic dataset, stop the app and run:
 
 ```sh
 npm run reset-demo
@@ -48,6 +58,8 @@ Proposals are saved and can be reopened from **Saved proposals** after refresh. 
 
 Original-time outlines use department colors. Hover over a change in the right-hand proposal pane to highlight both its current and proposed positions; keyboard focus does the same. Other calendar blocks are subdued while inspecting that change.
 
+Calendar cards prioritize the event name and adapt to their actual width and height. Short or narrow cards hide secondary text and use compact status indicators; taller, wider cards add time, department, and state labels. Department colors remain visible. Native hover tooltips and accessible names retain full event details, including any description, even when the card text is shortened.
+
 **Describe a constraint** can return several independent drafts. For example, “needs a EOOW and a observer” produces separate one-person qualification drafts. The event/template being edited supplies the attachment context. Review, edit, and **Confirm & attach** each draft independently. Explanations appear separately from short rule names. Unknown qualification names stay unmapped for review; “observer” is not assumed to mean “Drill Evaluator.” Choose an existing qualification or create the intended qualification under Planning inputs.
 
 ## Implementation
@@ -73,7 +85,7 @@ npm start 2>&1 | tee /tmp/pb4t.log
 
 Stop with Ctrl+C and restart to load code changes. Resolution logs include `resolution run=...`, `department trace=run/department/round`, `openai trace=...`, and `solver run=...`. They report elapsed durations, HTTP status/request IDs, token counts, and tool names. Keys, prompts, tool arguments, tool results, and planning payloads are not logged. A long OpenAI request is visible immediately through its `phase=request` line and gets a duration when it completes. Frequent browser status checks are not logged.
 
-Live week generation supplies context upfront and makes one structured proposal request per department per round, with up to four departments running concurrently. The coordinator merges and validates a complete round before requesting revisions from affected departments. With the four demo departments this uses four initial requests and at most four revision requests. The engine remains responsible for final hard-constraint validation.
+Live week generation supplies context upfront and makes one structured proposal request per department per round, with up to four departments running concurrently. The coordinator merges and validates a complete round before requesting revisions from affected departments. With the five departments in the expanded demo this uses five initial requests and at most five revision requests. The engine remains responsible for final hard-constraint validation.
 
 ## Import training documents
 
