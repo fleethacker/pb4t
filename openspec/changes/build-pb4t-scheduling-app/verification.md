@@ -1,6 +1,6 @@
 # Implementation verification
 
-Date: 2026-11-04. Progress: 75/75 tasks complete. Implementation and manual verification, including adaptive calendar card content, are complete.
+Date: 2026-11-04. Progress: 77/77 tasks complete. Implementation and manual verification, including uniform weekend columns and weekend sample events, are complete.
 
 ## Build and local operation
 
@@ -143,3 +143,11 @@ No automated test suite was added, per the requested hackathon scope. No branch,
 - Manually checked 15-, 30-, 45-, 60-, 90-, and 120-minute cards in an isolated 22-event preview. Narrow overlap cards omitted timestamps; the narrowest used a primary status glyph. The 15-minute card retained two title lines with no timestamp, and the 45-minute card retained two lines plus time without overflowing. A roomy 149-pixel-wide fixed card displayed its department. Checked a temporary 1800-pixel viewport to exercise wide-card behavior, then reset it to the normal viewport.
 - Native mouse click and keyboard Enter opened the short event's existing editor with the correct description and duration; closing left it unchanged. Proposal generation displayed 31 comparison cards with original/proposed markers, and keyboard focus on a proposed change still highlighted both placements. The complete planning dataset matched the saved baseline after all preview interactions and generation.
 - Frontend TypeScript/production build, formatting checks, and strict OpenSpec validation passed. Screenshot: ignored `.cache/pb4t-adaptive-cards.png`. Automated tests were skipped under the retained hackathon scope. Only the isolated preview on port 8086 was used; existing user calendars were not restarted or changed. No commit or push was made.
+
+## Uniform weekends and weekend sample events
+
+- Reverted all uncommitted read-only-popup source and documentation changes to the committed adaptive-card version (`05fc10b`), then removed the weekend-only background/class. No popup component or trigger remains; native detail tooltips and direct editor opening are restored.
+- Added Saturday 09:00 Comms check / 11:00 Engineering readiness review and Sunday 10:00 DC fire drill / 13:00 CSTT training drill. They use existing templates, personnel, assets, tags, and rules, with scheduling windows extending through Sunday 17:00. Fresh/reset seeds now contain 24 events and the same 19 templates, 20 constraints, and six illustrative requirements.
+- A local manual walkthrough validated both events on each weekend day individually, checked all CSV mappings and existing conflict examples, and found a complete feasible 25-event proposal in 3.037 seconds. All four weekend placements were retained, with zero hard conflicts, unscheduled events, or training gaps. A temporary SQLite database retained its planning records identically across close/reopen.
+- Browser inspection confirmed four weekend cards and identical computed background colors for all seven day columns. Keyboard activation of Saturday Comms check opened the existing editor at 2026-11-07 09:00 with its allowed end at 2026-11-08 17:00; no popup appeared. Closing left the event unchanged. Screenshot: ignored `.cache/pb4t-weekend-calendar.png`.
+- Go build/vet, frontend TypeScript/production build, formatting checks, and strict OpenSpec validation passed. The manual walkthrough is under ignored `.cache/debug/check-weekend-seed.go`. Automated tests were skipped under the retained hackathon scope. The owned preview on port 8086 was stopped; existing user calendars were not changed. No commit or push was made.

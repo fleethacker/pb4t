@@ -129,3 +129,8 @@
 
 - [x] 19.1 Prioritize event names and adapt secondary metadata to each card's rendered width and height, preserving accessible details and status indicators.
 - [x] 19.2 Verify short, narrow, roomy, fixed, draft, conflicting, and proposal cards in an isolated calendar.
+
+## 20. Weekend calendar and sample events
+
+- [x] 20.1 Revert the uncommitted details popup, use uniform day backgrounds, and add two valid sample events on each weekend day.
+- [x] 20.2 Verify weekend rendering, restored editor behavior, complete generation, and persistence in an isolated demo.

@@ -8,6 +8,11 @@ The application SHALL display saved events and timed drafts in a seven-day calen
 - **THEN** both events appear at their saved times with department identification
 - **AND** overlap alone does not imply a conflict
 
+#### Scenario: View weekend activities
+- **WHEN** the weekly calendar displays Saturday and Sunday
+- **THEN** their day columns use the same background as weekdays
+- **AND** weekend events use the same cards, department colors, and interactions as weekday events
+
 #### Scenario: Open the streamlined workspace
 - **WHEN** a planner opens a workspace page
 - **THEN** its main content follows the page heading without the four dashboard summary cards

@@ -581,7 +581,7 @@ function App() {
                           </span>
                         ))}
                       </div>
-                      {dates.map((d, index) => {
+                      {dates.map((d) => {
                         const visible = entries
                           .filter(
                             ({ event: e }) =>
@@ -603,9 +603,7 @@ function App() {
                         );
                         return (
                           <div
-                            className={
-                              "day-column " + (index > 4 ? "weekend" : "")
-                            }
+                            className="day-column"
                             key={d}
                             data-day={d}
                             style={{ backgroundSize: `100% ${hourHeight}px` }}

@@ -494,9 +494,6 @@ main {
   background-image: linear-gradient(to bottom, #e9ede3 1px, transparent 1px);
   min-width: 0;
 }
-.day-column.weekend {
-  background-color: #fcfdf9;
-}
 .calendar-event {
   position: absolute;
   border: 0;

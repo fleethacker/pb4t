@@ -85,12 +85,19 @@ func Seed(loc *time.Location) Data {
 		{"emcon-fri", "EMCON", "operations", "emcon", "Operations training officer", 4, 9, 60, []string{"no-radios"}, []string{"no-radios"}, false},
 		{"ammo-fri", "Moving ammo", "weapons", "ammo-movement", "Weapons training officer", 4, 13, 60, []string{"no-radios", "no-radars"}, []string{"no-radios", "no-radars", "one-evaluator"}, false},
 		{"cstt-fri", "CSTT training drill", "combat", "cstt-drill", "Combat systems training officer", 4, 13, 60, []string{"needs-radios"}, []string{"needs-radios", "one-tao", "sim-rule"}, false},
+		{"comms-sat", "Comms check", "operations", "comms-check", "Communications training officer", 5, 9, 30, []string{"needs-radios"}, []string{"needs-radios", "one-comms-operator"}, false},
+		{"eng-sat", "Engineering readiness review", "engineering", "readiness", "Engineering training officer", 5, 11, 60, []string{}, []string{"one-eoow"}, false},
+		{"dc-fire-sun", "DC fire drill", "dc", "dc-fire", "Damage control training officer", 6, 10, 60, []string{}, []string{"two-fpl", "dc-rule", "no-flight"}, false},
+		{"cstt-sun", "CSTT training drill", "combat", "cstt-drill", "Combat systems training officer", 6, 13, 60, []string{"needs-radios"}, []string{"needs-radios", "one-tao", "sim-rule"}, false},
 	}
 	for _, sample := range samples {
 		e := event(sample.id, sample.name, sample.department, sample.kind, sample.day, sample.hour, sample.duration, sample.rules, sample.fixed)
 		e.Tags = append(e.Tags, sample.tags...)
 		e.Contact = sample.contact
 		e.Description = "Illustrative sample scenario. Duration, staffing, and resource settings are editable demo defaults, not operational policy."
+		if sample.day >= 5 {
+			e.WindowEnd = at(6, 17)
+		}
 		d.Events = append(d.Events, e)
 	}
 	for i := range d.Events {

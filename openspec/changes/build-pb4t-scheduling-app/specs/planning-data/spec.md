@@ -73,6 +73,11 @@ The application SHALL provide a repeatable synthetic dataset containing multiple
 - **AND** the expanded calendar can be resolved while preserving fixed operations and covering its illustrative training requirements
 - **AND** ordinary startup does not overwrite an existing database with the expanded seed
 
+#### Scenario: Explore weekend sample events
+- **WHEN** a planner opens a newly seeded or explicitly reset demo
+- **THEN** Saturday and Sunday each contain two sample events with valid scheduling windows and existing template/rule references
+- **AND** weekly generation retains their valid requested weekend placements
+
 ### Requirement: Independent template occurrences
 The system SHALL copy template defaults into each new occurrence and retain its source template ID. Subsequent template edits SHALL affect future occurrences without changing existing calendar events. Existing stored templates SHALL remain readable without resetting the database.
 
