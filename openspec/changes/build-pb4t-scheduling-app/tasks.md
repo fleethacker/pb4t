@@ -105,3 +105,17 @@
 - [x] 14.1 Return independent short-name rule drafts with separate guidance, event/template context, and conservative qualification mapping.
 - [x] 14.2 Review and confirm individual drafts without losing other roles from the description.
 - [x] 14.3 Verify the reported phrase, mapping safeguards, incompatibility regression, and browser confirmation flow.
+
+## 15. Proposed calendar overlay
+
+- [x] 15.1 Overlay proposed changes on current placements with distinct styling, one card for unchanged events, and comparison controls.
+- [x] 15.2 Verify moved/new events, shared times, filtering, proposal lifecycle, and preservation of saved calendar data.
+
+## 16. Linked proposal highlighting
+
+- [x] 16.1 Use department colors for original-position outlines and link proposal-row hover/keyboard focus to both calendar placements.
+- [x] 16.2 Verify colors, moved/new event highlights, pointer/focus clearing, and saved-data preservation.
+
+## 17. Streamlined workspace header
+
+- [x] 17.1 Remove the four top dashboard cards, their unused component/styles, and use the freed space for the calendar.

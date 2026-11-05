@@ -39,6 +39,7 @@ import "./style.css";
 import { api } from "./api";
 import { Documents, SourceLink } from "./Documents";
 import { RuleFields } from "./RuleFields";
+import { calendarEntries } from "./calendar-overlay";
 
 const uid = () => crypto.randomUUID();
 let zone = "America/New_York";
@@ -160,7 +161,9 @@ function App() {
     [pollingPaused, setPollingPaused] = useState(false),
     [busy, setBusy] = useState(false),
     [toast, setToast] = useState(""),
-    [viewRun, setViewRun] = useState(false);
+    [viewRun, setViewRun] = useState(false),
+    [overlayHidden, setOverlayHidden] = useState(false),
+    [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
   const load = async () => {
     const c = await api<Context>(
       "/api/context" + (week ? "?week=" + week : ""),
@@ -223,8 +226,32 @@ function App() {
   const conflicting = new Set(
     ctx.evaluation.conflicts.flatMap((c) => c.event_ids),
   );
-  const coverage = ctx.evaluation.coverage,
-    covered = coverage.filter((c) => c.gap === 0).length;
+  const reviewingProposal = !!(
+    viewRun &&
+    proposal &&
+    ["feasible", "partial"].includes(proposal.status) &&
+    dateOnly(proposal.week) === day
+  );
+  const showingOverlay = reviewingProposal && !overlayHidden;
+  const proposedEvents = showingOverlay
+    ? proposal!.events.filter(
+        (e) => dateOnly(e.start) >= day && dateOnly(e.start) <= dates[6],
+      )
+    : null;
+  const entries = calendarEntries(events, proposedEvents);
+  const activeHighlight =
+    reviewingProposal &&
+    entries.some(
+      ({ event }) =>
+        event.id === highlightedEventId &&
+        (!filters.length || filters.includes(event.department_id)),
+    )
+      ? highlightedEventId
+      : null;
+  const proposedConflicts = new Set(
+    proposal?.evaluation?.conflicts?.flatMap((c) => c.event_ids) || [],
+  );
+  const coverage = ctx.evaluation.coverage;
   async function resolve(event?: Event) {
     setBusy(true);
     setError("");
@@ -235,6 +262,7 @@ function App() {
         agents: ctx!.ai_available,
       });
       setProposal(p);
+      setOverlayHidden(false);
       setPollingPaused(false);
       setEditing(null);
       setViewRun(true);
@@ -288,11 +316,13 @@ function App() {
   }
   const startHour = Math.min(
       7,
-      ...events.map((e) => Math.floor(minutes(e.start) / 60)),
+      ...entries.map(({ event: e }) => Math.floor(minutes(e.start) / 60)),
     ),
     endHour = Math.max(
       19,
-      ...events.map((e) => Math.ceil((minutes(e.start) + e.duration) / 60)),
+      ...entries.map(({ event: e }) =>
+        Math.ceil((minutes(e.start) + e.duration) / 60),
+      ),
     ),
     hourHeight = 72;
   return (
@@ -439,41 +469,6 @@ function App() {
               </button>
             </div>
           )}
-          <div className="metrics">
-            <Metric
-              label="EVENTS THIS WEEK"
-              value={String(events.length).padStart(2, "0")}
-              sub={`${events.filter((e) => e.fixed).length} fixed operational commitments`}
-              icon={<CalendarDays size={19} />}
-            />
-            <Metric
-              label="CONSTRAINT CONFLICTS"
-              value={String(ctx.evaluation.conflicts.length).padStart(2, "0")}
-              sub={
-                ctx.evaluation.feasible
-                  ? "All supplied constraints satisfied"
-                  : "Ready for review and resolution"
-              }
-              icon={<AlertTriangle size={19} />}
-              amber={!ctx.evaluation.feasible}
-            />
-            <Metric
-              label="PROJECTED TRAINING COVERAGE"
-              value={`${covered} / ${coverage.length}`}
-              sub="Planned coverage · not completion"
-              icon={<ShieldCheck size={19} />}
-            />
-            <Metric
-              label="DEPARTMENTAL AGENTS"
-              value={ctx.ai_available ? "Live AI" : "Core mode"}
-              sub={
-                ctx.ai_available
-                  ? "Live negotiation enabled"
-                  : "Add an OpenAI key to enable AI"
-              }
-              icon={<Users size={19} />}
-            />
-          </div>
           {page === "calendar" ? (
             <div className="calendar-layout">
               <section className="calendar-card">
@@ -523,6 +518,28 @@ function App() {
                     </span>
                   </div>
                 </div>
+                {reviewingProposal && (
+                  <div className="calendar-comparison">
+                    <div>
+                      <strong>
+                        {proposal?.status === "partial"
+                          ? "Partial proposal overlay"
+                          : "Proposal overlay"}
+                      </strong>
+                      <span>
+                        Compare current positions with proposed changes before
+                        applying.
+                      </span>
+                    </div>
+                    <button
+                      className="button"
+                      aria-pressed={!overlayHidden}
+                      onClick={() => setOverlayHidden(!overlayHidden)}
+                    >
+                      {overlayHidden ? "Show proposal" : "Hide proposal"}
+                    </button>
+                  </div>
+                )}
                 <div className="calendar-scroll">
                   <div className="calendar-grid" style={{ minWidth: 760 }}>
                     <div className="day-headers">
@@ -565,26 +582,25 @@ function App() {
                         ))}
                       </div>
                       {dates.map((d, index) => {
-                        const list = events
+                        const visible = entries
                           .filter(
-                            (e) =>
+                            ({ event: e }) =>
                               dateOnly(e.start) === d &&
                               (!filters.length ||
                                 filters.includes(e.department_id)),
                           )
-                          .sort((a, b) => a.start.localeCompare(b.start));
-                        const visible =
-                          proposal?.status === "feasible" && viewRun
-                            ? proposal.events
-                                .filter(
-                                  (e) =>
-                                    dateOnly(e.start) === d &&
-                                    (!filters.length ||
-                                      filters.includes(e.department_id)),
-                                )
-                                .sort((a, b) => a.start.localeCompare(b.start))
-                            : list;
-                        const positions = layout(visible);
+                          .sort(
+                            (a, b) =>
+                              Date.parse(a.event.start) -
+                              Date.parse(b.event.start),
+                          );
+                        const positions = layout(
+                          visible.map(({ key, event }) => ({
+                            id: key,
+                            start: event.start,
+                            duration: event.duration,
+                          })),
+                        );
                         return (
                           <div
                             className={
@@ -594,16 +610,32 @@ function App() {
                             data-day={d}
                             style={{ backgroundSize: `100% ${hourHeight}px` }}
                           >
-                            {visible.map((e) => {
+                            {visible.map((entry) => {
+                              const e = entry.event;
                               const department = dep(data, e.department_id),
-                                pos = positions.get(e.id)!;
+                                pos = positions.get(entry.key)!,
+                                label =
+                                  entry.layer === "proposed"
+                                    ? entry.added
+                                      ? "New"
+                                      : "Proposed"
+                                    : entry.layer === "current"
+                                      ? "Current"
+                                      : "",
+                                hasConflict =
+                                  showingOverlay && entry.layer !== "current"
+                                    ? proposedConflicts.has(e.id)
+                                    : conflicting.has(e.id);
+                              const description = `${label ? label + ": " : ""}${e.name} · ${stamp(e.start)} · ${e.duration} min`;
                               return (
                                 <button
-                                  key={e.id}
+                                  key={entry.key}
+                                  aria-label={description}
+                                  title={description}
                                   draggable={false}
                                   onPointerDown={(ev) => {
                                     drag.current = null;
-                                    if (e.fixed || viewRun) return;
+                                    if (e.fixed || reviewingProposal) return;
                                     drag.current = {
                                       event: e,
                                       x: ev.clientX,
@@ -631,17 +663,29 @@ function App() {
                                   }}
                                   onPointerUp={finishMove}
                                   onClick={() => {
+                                    if (reviewingProposal) {
+                                      setToast(description);
+                                      return;
+                                    }
                                     if (!drag.current?.moved) open(e);
                                   }}
                                   className={
                                     "calendar-event " +
                                     (e.fixed ? "fixed " : "") +
-                                    (e.status === "draft" ? "draft " : "") +
-                                    (conflicting.has(e.id) && !viewRun
-                                      ? "conflicted "
+                                    (e.status === "draft" &&
+                                    entry.layer !== "proposed"
+                                      ? "draft "
                                       : "") +
-                                    (viewRun && proposal?.status === "feasible"
+                                    (hasConflict ? "conflicted " : "") +
+                                    (entry.layer === "proposed"
                                       ? "proposed"
+                                      : entry.layer === "current"
+                                        ? "current-position"
+                                        : "") +
+                                    (activeHighlight
+                                      ? e.id === activeHighlight
+                                        ? " change-highlighted"
+                                        : " change-muted"
                                       : "")
                                   }
                                   style={
@@ -665,12 +709,15 @@ function App() {
                                   <span className="event-time">
                                     {e.fixed ? (
                                       <LockKeyhole size={10} />
-                                    ) : (
+                                    ) : !reviewingProposal ? (
                                       <GripVertical size={10} />
-                                    )}{" "}
+                                    ) : null}{" "}
                                     {time(e.start)}{" "}
-                                    {conflicting.has(e.id) && !viewRun && (
-                                      <AlertTriangle size={10} />
+                                    {hasConflict && <AlertTriangle size={10} />}
+                                    {label && (
+                                      <span className="event-position-label">
+                                        {label}
+                                      </span>
                                     )}
                                   </span>
                                   <strong>{e.name}</strong>
@@ -679,9 +726,11 @@ function App() {
                                       {department?.name}
                                     </span>
                                   )}
-                                  {e.status === "draft" && e.duration >= 60 && (
-                                    <span className="draft-label">DRAFT</span>
-                                  )}
+                                  {e.status === "draft" &&
+                                    entry.layer !== "proposed" &&
+                                    e.duration >= 60 && (
+                                      <span className="draft-label">DRAFT</span>
+                                    )}
                                 </button>
                               );
                             })}
@@ -692,15 +741,29 @@ function App() {
                   </div>
                 </div>
                 <div className="calendar-footer">
-                  <span>
-                    <span className="legend-draft" /> Draft event
-                  </span>
+                  {showingOverlay ? (
+                    <>
+                      <span>
+                        <span className="legend-current" /> Current position
+                      </span>
+                      <span>
+                        <span className="legend-proposed" /> Proposed position
+                      </span>
+                      <span>Unchanged events shown once</span>
+                    </>
+                  ) : (
+                    <span>
+                      <span className="legend-draft" /> Draft event
+                    </span>
+                  )}
                   <span>
                     <LockKeyhole size={12} /> Fixed commitment
                   </span>
-                  <span>
-                    <GripVertical size={13} /> Drag an event to preview a move
-                  </span>
+                  {!reviewingProposal && (
+                    <span>
+                      <GripVertical size={13} /> Drag an event to preview a move
+                    </span>
+                  )}
                   {filters.length > 0 && (
                     <button
                       className="text-button"
@@ -712,11 +775,14 @@ function App() {
                 </div>
               </section>
               <aside className="insight-column">
-                {proposal && viewRun ? (
+                {proposal && viewRun && dateOnly(proposal.week) === day ? (
                   <ProposalPanel
                     proposal={proposal}
                     data={data}
                     busy={busy}
+                    comparisonActive={reviewingProposal}
+                    highlightedEventId={activeHighlight}
+                    onHighlight={setHighlightedEventId}
                     apply={apply}
                     pollingPaused={pollingPaused}
                     retry={() => {
@@ -830,6 +896,7 @@ function App() {
                                     await api<Proposal>("/api/runs/" + r.id),
                                   );
                                   setPollingPaused(false);
+                                  setOverlayHidden(false);
                                   setViewRun(true);
                                 } catch (e) {
                                   setError((e as Error).message);
@@ -1043,39 +1110,13 @@ function App() {
     </div>
   );
 }
-function Metric({
-  label,
-  value,
-  sub,
-  icon,
-  amber = false,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  icon: React.ReactNode;
-  amber?: boolean;
-}) {
-  return (
-    <div className="metric">
-      <div>
-        <span className="eyebrow">{label}</span>
-        <strong className={amber ? "amber-text" : ""}>{value}</strong>
-        <p>{sub}</p>
-      </div>
-      <span className={"metric-icon " + (amber ? "amber-text" : "")}>
-        {icon}
-      </span>
-    </div>
-  );
-}
-function layout(events: Event[]) {
+function layout(events: Pick<Event, "id" | "start" | "duration">[]) {
   const result = new Map<string, { lane: number; total: number }>();
-  let cluster: Event[] = [];
+  let cluster: typeof events = [];
   let end = -1;
   function flush() {
     const lanes: number[] = [];
-    const assigned: { e: Event; lane: number }[] = [];
+    const assigned: { e: (typeof events)[number]; lane: number }[] = [];
     for (const e of cluster) {
       let lane = lanes.findIndex((t) => t <= minutes(e.start));
       if (lane < 0) lane = lanes.length;
@@ -1146,6 +1187,9 @@ function ProposalPanel({
   cancel,
   pollingPaused,
   retry,
+  comparisonActive,
+  highlightedEventId,
+  onHighlight,
 }: {
   proposal: Proposal;
   data: Data;
@@ -1154,7 +1198,16 @@ function ProposalPanel({
   cancel: () => void;
   pollingPaused: boolean;
   retry: () => void;
+  comparisonActive: boolean;
+  highlightedEventId: string | null;
+  onHighlight: (id: string | null) => void;
 }) {
+  const [hovered, setHovered] = useState<string | null>(null),
+    [focused, setFocused] = useState<string | null>(null);
+  useEffect(() => {
+    onHighlight(comparisonActive ? hovered || focused : null);
+    return () => onHighlight(null);
+  }, [comparisonActive, hovered, focused, onHighlight]);
   return (
     <div className="insight-card proposal-panel">
       <div className="panel-title">
@@ -1203,16 +1256,40 @@ function ProposalPanel({
               Alternative: changes your requested event time.
             </div>
           )}
-          {(p.changes || []).map((c) => (
-            <div className="change" key={c.event_id}>
-              <strong>{c.name}</strong>
-              <div>
-                {c.before ? stamp(c.before) : "New occurrence"}{" "}
-                <ArrowRight size={12} /> {stamp(c.after)}
+          {(p.changes || []).map((c) => {
+            const event =
+              p.events?.find((e) => e.id === c.event_id) ||
+              data.events.find((e) => e.id === c.event_id);
+            return (
+              <div
+                className={
+                  "change" +
+                  (highlightedEventId === c.event_id ? " change-active" : "")
+                }
+                key={c.event_id}
+                role="group"
+                aria-label={`Proposed change: ${c.name}`}
+                tabIndex={comparisonActive ? 0 : undefined}
+                onMouseEnter={() => setHovered(c.event_id)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setFocused(c.event_id)}
+                onBlur={() => setFocused(null)}
+                style={
+                  {
+                    "--event-color":
+                      dep(data, event?.department_id || "")?.color || "#607e74",
+                  } as React.CSSProperties
+                }
+              >
+                <strong>{c.name}</strong>
+                <div>
+                  {c.before ? stamp(c.before) : "New occurrence"}{" "}
+                  <ArrowRight size={12} /> {stamp(c.after)}
+                </div>
+                <small>{c.reason}</small>
               </div>
-              <small>{c.reason}</small>
-            </div>
-          ))}
+            );
+          })}
           {p.evaluation && (
             <>
               <h4>Personnel assignments</h4>

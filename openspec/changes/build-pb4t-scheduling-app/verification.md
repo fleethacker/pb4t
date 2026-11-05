@@ -1,6 +1,6 @@
 # Implementation verification
 
-Date: 2026-11-04. Progress: 66/66 tasks complete. Implementation and manual verification, including compound constraint interpretation, are complete.
+Date: 2026-11-04. Progress: 71/71 tasks complete. Implementation and manual verification, including linked proposal highlights and the streamlined workspace header, are complete.
 
 ## Build and local operation
 
@@ -108,3 +108,23 @@ No automated test suite was added, per the requested hackathon scope. No branch,
 - A local replay exercised the public Client.Constraints path with a deliberately incorrect evaluator mapping. It verified one forced request, canonical short EOOW naming, removal of staffing-target fields, rejection of the observer/evaluator alias, and correct matching when an actual Observer qualification exists. No external requests were made by that replay.
 - In the browser, entered the exact phrase while authoring an unsaved template. Two independent review cards appeared. Confirming EOOW attached just that rule and left the Observer draft for mapping; the backend rejected an attempt to persist the unmapped Observer rule. The seven calendar events, six original templates, and four qualifications remained unchanged in the isolated demo. Screenshot: ignored `.cache/pb4t-compound-constraints.jpg`.
 - Go build/vet, frontend typecheck/production build, formatting checks, and strict OpenSpec validation passed. No automated suite, branch, commit, push, or changes to the user's running app/database were made.
+
+## Proposed calendar overlay
+
+- Replaced proposal-only rendering with a pure overlay of saved placements and changed/new proposed placements. Original positions use outlined/hatched cards, proposals use filled cards and explicit labels, and unchanged/fixed events appear once. Combined lane placement uses distinct render keys, with no changes to persisted event IDs. Hours span both layers, including new/earlier/later placements.
+- A manual check of saved run `6d24d39ccc719327` verified eleven rendered entries: three original changed positions, four proposed changes (including one new occurrence), and four unchanged events. Verified the damage-control drill at both original Monday 10:00 and proposed 11:00, unique keys, fixed-card de-duplication, equivalent timezone instants, hidden/applied de-duplication, and unchanged input arrays.
+- Browser walkthrough on a separate seeded database verified eleven overlay cards, seven cards when hidden, eleven when restored, and a Damage Control filter yielding one original/two proposed cards. Clicking a proposal showed placement details without opening an editor. Navigating to another week hid both its overlay and proposal panel; returning restored the comparison.
+- Compared the entire isolated planning dataset before/after previewing, filtering, week navigation, and card inspection: no changes. Cancel returned to seven saved cards. Explicit Apply persisted eight events, zero hard conflicts, and full configured training coverage; comparison controls/proposed cards disappeared. The actual user app/database was not restarted or modified.
+- Frontend TypeScript/production builds, formatting checks, and strict OpenSpec validation passed. Browser proof is under ignored `.cache/pb4t-calendar-overlay.jpg`. No backend logic change, OpenAI call, automated suite, branch, commit, or push was needed.
+
+## Department outlines and linked proposal highlighting
+
+- Original-time block borders now use the same department color as their event. Verified computed border colors for Damage Control, Engineering, and Weapons in the browser.
+- Native pointer hover over the Damage Control change row (without focusing it) highlighted its original 10:00 and proposed 11:00 blocks, with nine other blocks subdued. Moving the pointer away cleared both highlight and subdued styles.
+- Keyboard-only focus on the Engineering change row highlighted its original/proposed positions without pointer hover. The new-occurrence row highlighted one proposed block. Tabbing away cleared styles, and closing the comparison returned to seven normal saved cards with no stale highlights.
+- Compared the entire isolated planning dataset after the walkthrough with its baseline: unchanged. Frontend TypeScript/production build, formatting checks, and strict OpenSpec validation passed. No backend changes, API analysis, automated suite, commit, push, or changes to the user's running app/database were made. Screenshot: ignored `.cache/pb4t-linked-highlights.jpg`.
+
+## Streamlined workspace header
+
+- Removed the four global summary cards and their unused component, calculation, and responsive styles. Detailed conflict, training, and proposal information remains in the existing planning views. Increased the calendar's available height to use the freed space.
+- Browser verification on the isolated preview confirmed zero summary cards, the calendar directly below the heading, and the existing proposal overlay with two linked highlighted placements on hover. Frontend TypeScript/production build passed. Screenshot: ignored `.cache/pb4t-streamlined-calendar.png`. Automated tests were skipped under the retained hackathon scope; the user's running app/database was unchanged.
