@@ -148,7 +148,42 @@ function App() {
     y: number;
     offset: number;
     moved: boolean;
+    pointerId: number;
+    target: HTMLButtonElement;
   } | null>(null);
+  const suppressDragClick = useRef(false);
+  const moveInFlight = useRef(false);
+  const [savingMove, setSavingMove] = useState(false);
+  const [draggingEventId, setDraggingEventId] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<{
+    event: Event;
+    day: string;
+    start: string;
+  } | null>(null);
+  function cancelMove() {
+    const pending = drag.current;
+    if (!pending) return;
+    suppressDragClick.current = pending.moved;
+    drag.current = null;
+    setDraggingEventId(null);
+    setDragPreview(null);
+    if (pending.target.hasPointerCapture(pending.pointerId))
+      pending.target.releasePointerCapture(pending.pointerId);
+  }
+  useEffect(() => {
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape" && drag.current) {
+        ev.preventDefault();
+        cancelMove();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("blur", cancelMove);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("blur", cancelMove);
+    };
+  }, []);
   const [ctx, setCtx] = useState<Context | null>(null),
     [week, setWeek] = useState(""),
     [page, setPage] = useState("calendar"),
@@ -293,18 +328,27 @@ function App() {
     setEditing(structuredClone(e));
     setTemplate(t);
   }
-  function finishMove(ev: React.PointerEvent<HTMLButtonElement>) {
+  function movePlacement(clientX: number, clientY: number) {
     const pending = drag.current;
-    if (!pending?.moved) return;
+    if (!pending) return null;
     const column = document
-      .elementFromPoint(ev.clientX, ev.clientY)
+      .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>(".day-column");
-    if (!column?.dataset.day) return;
+    if (!column?.dataset.day) return null;
     const box = column.getBoundingClientRect();
-    const slot =
-      Math.round(((ev.clientY - box.top - pending.offset) / hourHeight) * 4) *
-        15 +
-      startHour * 60;
+    const earliest = Math.max(0, startHour * 60);
+    const latest =
+      Math.floor((Math.min(24, endHour) * 60 - pending.event.duration) / 15) * 15;
+    if (latest < earliest) return null;
+    const slot = Math.max(
+      earliest,
+      Math.min(
+        latest,
+        Math.round(((clientY - box.top - pending.offset) / hourHeight) * 4) *
+          15 +
+          startHour * 60,
+      ),
+    );
     const start = iso(
       column.dataset.day +
         "T" +
@@ -312,7 +356,62 @@ function App() {
         ":" +
         String(slot % 60).padStart(2, "0"),
     );
-    open({ ...pending.event, start, requested_start: start });
+    return { event: pending.event, day: column.dataset.day, start };
+  }
+  function updateMove(ev: React.PointerEvent<HTMLButtonElement>) {
+    const pending = drag.current;
+    if (!pending || pending.pointerId !== ev.pointerId) return;
+    if (!pending.moved) {
+      if (Math.hypot(ev.clientX - pending.x, ev.clientY - pending.y) <= 8)
+        return;
+      pending.moved = true;
+      setDraggingEventId(pending.event.id);
+    }
+    ev.preventDefault();
+    setDragPreview(movePlacement(ev.clientX, ev.clientY));
+  }
+  function finishMove(ev: React.PointerEvent<HTMLButtonElement>) {
+    const pending = drag.current;
+    if (!pending || pending.pointerId !== ev.pointerId) return;
+    const placement = pending.moved
+      ? movePlacement(ev.clientX, ev.clientY)
+      : null;
+    cancelMove();
+    if (
+      placement &&
+      Date.parse(placement.start) !== Date.parse(pending.event.start)
+    )
+      void saveMove(pending.event, placement.start);
+  }
+  async function saveMove(event: Event, start: string) {
+    if (moveInFlight.current) return;
+    moveInFlight.current = true;
+    setSavingMove(true);
+    setError("");
+    let saved = false;
+    try {
+      const result = await api<{ event: Event; evaluation: Evaluation }>(
+        "/api/events/" + event.id + "/move",
+        "POST",
+        { start },
+      );
+      saved = true;
+      await load();
+      setToast(
+        result.event.status === "draft" && !result.evaluation.feasible
+          ? "Move saved as draft · Weekly conflicts remain"
+          : `Event moved to ${stamp(result.event.start)}`,
+      );
+    } catch (err) {
+      setError(
+        saved
+          ? "Move saved, but the calendar could not refresh. Reload to see the new time."
+          : `Move could not be saved: ${(err as Error).message}`,
+      );
+    } finally {
+      moveInFlight.current = false;
+      setSavingMove(false);
+    }
   }
   const startHour = Math.min(
       7,
@@ -603,7 +702,10 @@ function App() {
                         );
                         return (
                           <div
-                            className="day-column"
+                            className={
+                              "day-column" +
+                              (dragPreview?.day === d ? " drop-target" : "")
+                            }
                             key={d}
                             data-day={d}
                             style={{ backgroundSize: `100% ${hourHeight}px` }}
@@ -654,9 +756,18 @@ function App() {
                                   aria-label={details}
                                   title={details}
                                   draggable={false}
+                                  disabled={savingMove}
                                   onPointerDown={(ev) => {
-                                    drag.current = null;
-                                    if (e.fixed || reviewingProposal) return;
+                                    if (!ev.isPrimary || ev.button !== 0) return;
+                                    cancelMove();
+                                    suppressDragClick.current = false;
+                                    if (
+                                      e.fixed ||
+                                      e.status === "completed" ||
+                                      reviewingProposal ||
+                                      moveInFlight.current
+                                    )
+                                      return;
                                     drag.current = {
                                       event: e,
                                       x: ev.clientX,
@@ -666,32 +777,42 @@ function App() {
                                         ev.currentTarget.getBoundingClientRect()
                                           .top,
                                       moved: false,
+                                      pointerId: ev.pointerId,
+                                      target: ev.currentTarget,
                                     };
                                     ev.currentTarget.setPointerCapture(
                                       ev.pointerId,
                                     );
                                   }}
-                                  onPointerMove={(ev) => {
-                                    if (
-                                      drag.current &&
-                                      ev.buttons &&
-                                      Math.hypot(
-                                        ev.clientX - drag.current.x,
-                                        ev.clientY - drag.current.y,
-                                      ) > 8
-                                    )
-                                      drag.current.moved = true;
-                                  }}
+                                  onPointerMove={updateMove}
                                   onPointerUp={finishMove}
-                                  onClick={() => {
+                                  onPointerCancel={cancelMove}
+                                  onLostPointerCapture={cancelMove}
+                                  onClick={(ev) => {
+                                    if (
+                                      ev.detail !== 0 &&
+                                      suppressDragClick.current
+                                    ) {
+                                      suppressDragClick.current = false;
+                                      return;
+                                    }
+                                    if (moveInFlight.current) return;
                                     if (reviewingProposal) {
                                       setToast(description);
                                       return;
                                     }
-                                    if (!drag.current?.moved) open(e);
+                                    open(e);
                                   }}
                                   className={
                                     "calendar-event " +
+                                    (!e.fixed &&
+                                      e.status !== "completed" &&
+                                      !reviewingProposal
+                                      ? "movable "
+                                      : "") +
+                                    (draggingEventId === e.id
+                                      ? "dragging "
+                                      : "") +
                                     (e.fixed ? "fixed " : "") +
                                     (isDraft ? "draft " : "") +
                                     (hasConflict ? "conflicted " : "") +
@@ -762,6 +883,34 @@ function App() {
                                 </button>
                               );
                             })}
+                            {dragPreview?.day === d && (
+                              <div
+                                className="calendar-drag-preview"
+                                aria-hidden="true"
+                                style={
+                                  {
+                                    top:
+                                      ((minutes(dragPreview.start) -
+                                        startHour * 60) /
+                                        60) *
+                                        hourHeight +
+                                      3,
+                                    height: Math.max(
+                                      28,
+                                      (dragPreview.event.duration / 60) *
+                                        hourHeight -
+                                        6,
+                                    ),
+                                    "--event-color":
+                                      dep(data, dragPreview.event.department_id)
+                                        ?.color || "#607e74",
+                                  } as React.CSSProperties
+                                }
+                              >
+                                <strong>{time(dragPreview.start)}</strong>
+                                <span>{dragPreview.event.name}</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -789,7 +938,16 @@ function App() {
                   </span>
                   {!reviewingProposal && (
                     <span>
-                      <GripVertical size={13} /> Drag an event to preview a move
+                      <GripVertical size={13} />
+                      <span role="status">
+                        {savingMove
+                          ? "Saving move…"
+                          : draggingEventId
+                            ? dragPreview
+                              ? `Drop to save ${stamp(dragPreview.start)} · Esc to cancel`
+                              : "Drop on a calendar day · Esc to cancel"
+                            : "Drag an event to move it · Drop to save"}
+                      </span>
                     </span>
                   )}
                   {filters.length > 0 && (

@@ -1625,6 +1625,39 @@ legend {
   touch-action: none;
   user-select: none;
 }
+.calendar-event.movable {
+  cursor: grab;
+}
+.calendar-event.dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+.day-column.drop-target {
+  background-color: #edf4e6;
+}
+.calendar-drag-preview {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  border: 2px dashed var(--event-color);
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: color-mix(in srgb, var(--event-color), #132a20 30%);
+  background: color-mix(in srgb, var(--event-color) 16%, white);
+  box-shadow: 0 3px 12px #193e3425;
+  font-size: 11px;
+  user-select: none;
+}
+.calendar-drag-preview strong,
+.calendar-drag-preview span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .template-choice {
   display: flex;
